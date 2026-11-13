@@ -1,0 +1,19 @@
+{
+  "name": "@saas/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nitropack dev --port 3001",
+    "build": "nitropack build",
+    "preview": "wrangler dev",
+    "deploy": "bun run build && wrangler deploy",
+    "postinstall": "nitropack prepare"
+  },
+  "dependencies": {
+    "@saas/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "nitropack": "^2.13.6",
+    "wrangler": "^4.85.0"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "saas-poc-ec",
+  "private": true,
+  "workspaces": ["apps/*", "layers/*"],
+  "scripts": {
+    "dev": "bun run --filter '*' dev",
+    "build": "bun run --filter '*' build"
+  }
+}

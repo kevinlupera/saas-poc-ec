@@ -1,0 +1,13 @@
+node_modules
+.output
+.nuxt
+.nitro
+.wrangler
+.data
+.env
+.env.*
+!.env.example
+.DS_Store
+.atl
+.codegraph
+bun.lock

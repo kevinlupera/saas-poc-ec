@@ -1,0 +1,7 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "saas-api",
+  "compatibility_date": "2025-07-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true }
+}
