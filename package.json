@@ -1,9 +1,22 @@
 {
   "name": "saas-poc-ec",
   "private": true,
-  "workspaces": ["apps/*", "layers/*"],
   "scripts": {
-    "dev": "bun run --filter '*' dev",
-    "build": "bun run --filter '*' build"
+    "dev": "pnpm -r --parallel run dev",
+    "dev:api": "pnpm --filter @saas/api dev",
+    "dev:web": "pnpm --filter @saas/web dev",
+    "dev:mcp": "pnpm --filter @saas/mcp dev",
+    "build": "pnpm -r run build",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "typecheck": "pnpm --filter @saas/api --filter @saas/mcp run types && pnpm -r run typecheck",
+    "check": "pnpm check:boundaries && pnpm typecheck",
+    "mcp:inspect": "pnpm dlx @modelcontextprotocol/inspector@2.13.0"
+  },
+  "packageManager": "pnpm@11.28.12",
+  "engines": {
+    "node": "^22.21.0 || ^24.11.0 || >=26.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }

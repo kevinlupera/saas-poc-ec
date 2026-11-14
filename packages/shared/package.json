@@ -1,0 +1,12 @@
+{
+  "name": "@saas/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "Shared contract (types + zod schemas). Framework-agnostic.",
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}

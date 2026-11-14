@@ -1,0 +1,25 @@
+{
+  "name": "@saas/mcp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nitropack dev --port 3002",
+    "build": "nitropack build",
+    "preview": "wrangler dev",
+    "deploy": "pnpm build && wrangler deploy",
+    "postinstall": "nitropack prepare",
+    "types": "nitropack prepare",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cfworker/json-schema": "^4.1.6",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@saas/shared": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "nitropack": "^2.13.6",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.161.0"
+  }
+}

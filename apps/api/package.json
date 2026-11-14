@@ -6,14 +6,17 @@
     "dev": "nitropack dev --port 3001",
     "build": "nitropack build",
     "preview": "wrangler dev",
-    "deploy": "bun run build && wrangler deploy",
-    "postinstall": "nitropack prepare"
+    "deploy": "pnpm build && wrangler deploy",
+    "postinstall": "nitropack prepare",
+    "types": "nitropack prepare",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@saas/shared": "workspace:*"
   },
   "devDependencies": {
     "nitropack": "^2.13.6",
+    "typescript": "^6.0.3",
     "wrangler": "^4.85.0"
   }
 }

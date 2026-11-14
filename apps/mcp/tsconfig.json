@@ -1,0 +1,11 @@
+{
+  "extends": "./.nitro/types/tsconfig.json",
+  // `include` replaces the base tsconfig's: repeat it and add the apps/api
+  // route types so $fetch('/api/...') is typed.
+  "include": [
+    "./.nitro/types/nitro.d.ts",
+    "./server/**/*",
+    "./nitro.config.ts",
+    "../api/.nitro/types/nitro-routes.d.ts"
+  ]
+}

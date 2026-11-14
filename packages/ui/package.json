@@ -1,0 +1,10 @@
+{
+  "name": "@saas/ui",
+  "private": true,
+  "type": "module",
+  "description": "Nuxt layer: shared components, composables and theme. Nuxt apps only.",
+  "main": "./nuxt.config.ts",
+  "peerDependencies": {
+    "nuxt": "^4.6.4"
+  }
+}
