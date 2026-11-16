@@ -4,7 +4,7 @@ import { defineNitroConfig } from 'nitropack/config'
 // HTTP to apps/api or shared packages (db + core). See README.
 export default defineNitroConfig({
   compatibilityDate: '2025-07-15',
-  preset: 'cloudflare_module',
+  preset: 'aws_lambda',
   srcDir: 'server',
   runtimeConfig: {
     // apps/api URL (used by the example tool). Override with NITRO_API_BASE.

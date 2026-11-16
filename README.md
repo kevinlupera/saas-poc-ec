@@ -91,7 +91,20 @@ curl -s -X POST localhost:3002/mcp \
 
 ## Deployment
 
-- `apps/api` and `apps/mcp`: Cloudflare Workers (`pnpm --filter @saas/api deploy`, `pnpm --filter @saas/mcp deploy`).
-- `apps/web`: static via `nuxt generate` (S3 + CloudFront, Cloudflare Pages, etc.).
+- `apps/api` and `apps/mcp`: AWS Lambda, using Nitro's `aws_lambda` preset.
+- `apps/web`: static via `nuxt generate`, hosted on S3 + CloudFront.
+
+Build each Lambda independently:
+
+```bash
+pnpm --filter @saas/api build
+pnpm --filter @saas/mcp build
+```
+
+For each app, zip the **contents** of its `.output/` directory (so `server/` is at the archive root), then upload to a separate Lambda with the **Node.js 22.x** runtime and handler **`server/index.handler`**. Expose each function through an API Gateway HTTP API with a proxy integration (payload format 2.0) or a Lambda Function URL. The MCP uses stateless JSON responses; Lambda response streaming is not required.
+
+Set `NITRO_WEB_ORIGIN` on the API to the frontend origin, `NITRO_API_BASE` on the MCP to the deployed API URL, and `NUXT_PUBLIC_API_BASE` **when building the static frontend** to that same API URL. Configure `NITRO_MCP_TOKEN` on the MCP as needed (see warning below).
+
+Use `pnpm dev:api` and `pnpm dev:mcp` for local development. The Lambda build exports a handler rather than a local HTTP server. The old Wrangler `preview` and `deploy` scripts have been removed; AWS infrastructure and deployment automation are not configured in this repository.
 
 **Before exposing the MCP to clients:** replace the shared token with OAuth and scope each token to its business (multi-tenant), plus per-token rate limiting.

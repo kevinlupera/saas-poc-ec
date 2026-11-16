@@ -5,7 +5,7 @@ import { registerApiStatus } from '../tools/api-status'
 
 /**
  * MCP endpoint (Streamable HTTP, stateless): POST /mcp.
- * Each request creates its own server + transport → works the same on Workers or Lambda.
+ * Each request creates its own server + transport, suitable for AWS Lambda.
  */
 export default defineEventHandler(async (event) => {
   const { apiBase, mcpToken } = useRuntimeConfig(event)
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
 
   const server = new McpServer(
     { name: 'saas-mcp', version: '0.1.0' },
-    // `eval`-free validator: required on Cloudflare Workers.
+    // Portable, `eval`-free JSON Schema validator.
     { jsonSchemaValidator: new CfWorkerJsonSchemaValidator() },
   )
   registerApiStatus(server, apiBase)
