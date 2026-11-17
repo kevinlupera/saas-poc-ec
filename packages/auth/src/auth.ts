@@ -84,7 +84,26 @@ export function createAuth(config: AuthConfig) {
           return { tenantId, role: principal.role }
         },
       }),
-      mcp({ loginPage: `${config.webOrigin}/sign-in`, consentPage: `${config.webOrigin}/consent`, resource: config.mcpResource }),
+      mcp({
+        loginPage: `${config.webOrigin}/sign-in`,
+        consentPage: `${config.webOrigin}/consent`,
+        resource: config.mcpResource,
+        // The consent is tied to the session's active tenant, so tokens say which tenant they act in.
+        // No picker yet (shouldRedirect: false): a user in several tenants authorizes the active one.
+        postLogin: {
+          page: `${config.webOrigin}/select-tenant`,
+          shouldRedirect: () => false,
+          consentReferenceId: ({ session }) => {
+            const tenant = (session as { activeOrganizationId?: string | null }).activeOrganizationId
+            return tenant ?? undefined
+          },
+        },
+        // `tenant_id` is only emitted when the user is still a member of that tenant.
+        customAccessTokenClaims: async ({ user, referenceId }) => {
+          if (!user || !referenceId) return {}
+          return (await findMemberRole(config.db, user.id, referenceId)) ? { tenant_id: referenceId } : {}
+        },
+      }),
       cimd({ fetchClientMetadataResource, metadataProfile: 'mcp-2026-07-28' }),
       i18n({ translations: locales }),
       openAPI(),

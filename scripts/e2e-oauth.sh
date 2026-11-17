@@ -8,6 +8,7 @@ C=$(curl -s -m 30 -i -X POST $B/api/auth/sign-up/email -H "$J" -H "$O" -d "{\"em
 ORG=$(curl -s -m 30 -X POST $B/api/auth/organization/create -H "$J" -H "$O" -H "cookie: $C" -d "{\"name\":\"p\",\"slug\":\"p$S\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
 CID=$(curl -s -m 30 -X POST $B/api/auth/oauth2/create-client -H "$J" -H "$O" -H "cookie: $C" -d "{\"client_name\":\"e2e\",\"application_type\":\"native\",\"redirect_uris\":[\"$RED\"],\"token_endpoint_auth_method\":\"none\",\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"scope\":\"openid profile email offline_access\"}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('client_id') or d)")
 echo "client: $CID"
+[ -n "$C" ] && [ -n "$ORG" ] && [[ "$CID" != *Unauthorized* ]] && [ -n "$CID" ] || { echo "FAIL setup (sign-up/org/client)"; exit 1; }
 V=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))"); CH=$(python3 -c "import hashlib,base64,sys;print(base64.urlsafe_b64encode(hashlib.sha256(sys.argv[1].encode()).digest()).rstrip(b'=').decode())" "$V")
 URL="$B/api/auth/oauth2/authorize?response_type=code&client_id=$CID&redirect_uri=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" $RED)&scope=openid%20profile&code_challenge=$CH&code_challenge_method=S256&state=xyz&resource=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" $RES)"
 echo "--- authorize (signed in)"; LOC=$(curl -s -m 30 -i "$URL" -H "cookie: $C" | grep -i '^location:' | sed 's/^[Ll]ocation: //' | tr -d '\r'); echo "$LOC" | cut -c1-160
@@ -19,3 +20,8 @@ echo "--- token"; T=$(curl -s -m 30 -X POST $B/api/auth/oauth2/token -H 'content
 AT=$(echo "$T" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
 echo "--- mcp with token (200 expected)"; curl -s -m 30 -o /dev/null -w "%{http_code}\n" -X POST $RES -H "authorization: Bearer $AT" -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 echo "--- mcp no token (401)"; curl -s -m 30 -o /dev/null -w "%{http_code}\n" -X POST $RES -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+echo "--- token carries the tenant (tenant_id == org)"
+TID=$(echo "$AT" | python3 -c "import sys,json,base64; p=sys.stdin.read().split('.')[1]; print(json.loads(base64.urlsafe_b64decode(p+'='*(-len(p)%4))).get('tenant_id',''))")
+if [ -n "$TID" ] && [ "$TID" = "$ORG" ]; then echo "tenant_id ok ($TID)"; else echo "FAIL tenant_id='$TID' expected '$ORG'"; exit 1; fi
+echo "--- consent screen can show the client name"
+curl -s -m 30 "$B/api/auth/oauth2/public-client?client_id=$CID" -H "cookie: $C" | python3 -c "import sys,json; n=json.load(sys.stdin).get('client_name'); print('client_name:', n); sys.exit(0 if n=='e2e' else 1)" || { echo "FAIL client name"; exit 1; }
