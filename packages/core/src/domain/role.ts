@@ -17,3 +17,16 @@ export const ROLE_ACTIONS: Record<Role, readonly Action[]> = {
   recepcion: ['agenda:all', 'agenda:own'],
   profesional: ['agenda:own'],
 }
+
+/** Resource name under which API keys store their scopes: `permissions: { saas: ['agenda:own'] }`. */
+export const SCOPE_RESOURCE = 'saas'
+
+/** Reads scopes from an API key's `permissions`. Unknown or malformed entries are dropped. */
+export function scopesFromPermissions(permissions: unknown): Action[] {
+  const raw = (permissions as Record<string, unknown> | null | undefined)?.[SCOPE_RESOURCE]
+  if (!Array.isArray(raw)) return []
+  return raw.filter((v): v is Action => (ACTIONS as readonly unknown[]).includes(v))
+}
+
+export const asRole = (value: unknown): Role | undefined =>
+  (ROLES as readonly unknown[]).includes(value) ? (value as Role) : undefined
