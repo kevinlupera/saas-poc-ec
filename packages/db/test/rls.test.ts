@@ -62,11 +62,14 @@ test('tenant context does not leak to the next transaction on the same connectio
 test('rows with an empty tenant_id are never visible, even after a tenant context ran on the connection', async () => {
   // Postgres reports '' (not NULL) for a custom setting once it was set in an earlier transaction.
   await owner.query("insert into rls_probe (tenant_id, secret) values ('', 'empty-tenant-secret')")
-  await secrets('tenant-a') // sets app.tenant_id locally; pool max is 1, so the same connection is reused
-  const { rows } = await app.execute(sql`select secret from rls_probe`)
-  assert.equal(rows.length, 0)
-  assert.deepEqual(await secrets('tenant-a'), ['a-secret'])
-  await owner.query("delete from rls_probe where tenant_id = ''")
+  try {
+    await secrets('tenant-a') // sets app.tenant_id locally; pool max is 1, so the same connection is reused
+    const { rows } = await app.execute(sql`select secret from rls_probe`)
+    assert.equal(rows.length, 0)
+    assert.deepEqual(await secrets('tenant-a'), ['a-secret'])
+  } finally {
+    await owner.query("delete from rls_probe where tenant_id = ''")
+  }
 })
 
 test('a tenant cannot write rows for another tenant', async () => {
@@ -98,4 +101,18 @@ test('every business table has tenant_id and forced RLS', async () => {
   const business = rows.filter((r) => !authTables.has(r.name) && r.name !== 'rls_probe')
   const bad = business.filter((r) => !r.has_tenant_id || !r.forced).map((r) => r.name)
   assert.deepEqual(bad, [], `business tables missing tenant_id or FORCE RLS: ${bad.join(', ')}`)
+})
+
+test('every business table has the current tenant_isolation policy (not one from an older helper)', async () => {
+  const authTables = new Set(Object.values(schema).filter((t) => is(t, PgTable)).map((t) => getTableName(t)))
+  const { rows } = await owner.query(
+    "select tablename, qual, with_check from pg_policies where schemaname = 'public' and policyname = 'tenant_isolation'",
+  )
+  const byTable = new Map(rows.map((r) => [r.tablename, r]))
+  const { rows: tables } = await owner.query("select tablename from pg_tables where schemaname = 'public'")
+  const stale = tables
+    .map((t) => t.tablename as string)
+    .filter((name) => !authTables.has(name) && name !== 'rls_probe')
+    .filter((name) => !/NULLIF/.test(byTable.get(name)?.qual ?? '') || !/NULLIF/.test(byTable.get(name)?.with_check ?? ''))
+  assert.deepEqual(stale, [], `outdated or missing tenant_isolation policy; re-run tenantRlsSql in a new migration: ${stale.join(', ')}`)
 })

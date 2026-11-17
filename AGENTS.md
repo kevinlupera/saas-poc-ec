@@ -37,7 +37,7 @@ Every endpoint in `apps/api/server/api` ships with **both**:
 1. **OpenAPI docs**: a `defineRouteMeta({ openAPI: { tags, operationId, summary, description, responses, ... } })` in the handler file. Protected routes declare `security`, path params and every status they can return (401/403 included).
 2. **An MCP tool** in `apps/mcp/server/tools/<name>.ts` exporting `export const route = 'METHOD /api/path/{param}'` and registering the tool. Mark read-only tools with `readOnlyHint`; destructive or credential-minting ones need explicit human confirmation.
 
-`pnpm check:api` fails the build if either is missing, if an `operationId` repeats, or if a tool points at a route that does not exist.
+`pnpm check:api` fails the build if either is missing (route files must be named `<name>.<get|post|put|patch|delete>.ts` so they can be checked), if an `operationId` repeats, or if a tool points at a route that does not exist.
 The only escape hatch is `scripts/api-contract.exemptions.json`: an entry needs a real `reason`, and it fails once the route gets a tool (stale). Treat exemptions as debt, never as a default.
 
 Nitro notes (we run `nitropack` 2.x; nitro.build docs describe v3):
@@ -51,6 +51,7 @@ Open decision: **how tools call the API on behalf of the user.** Forwarding the 
 ## Multi-tenancy (`tenantId` = Better Auth organization id)
 
 - Every business table has `tenant_id text not null` and RLS enabled with `tenantRlsSql('<table>')` in its migration. `pnpm test:db` fails on a business table without both.
+- `tenantRlsSql` is idempotent. If its policy SQL ever changes, add a migration that re-runs it for every business table; `pnpm test:db` fails on a table whose deployed policy is older than the helper.
 - Touch tenant data only through `withTenant(db, tenantId, tx => ...)`. Never query business tables with the bare `db`.
 - RLS is ignored by superusers, `BYPASSRLS` roles and (without FORCE) the owner. The app connects as `saas_app` (`NITRO_DATABASE_URL`); migrations use the owner (`DATABASE_URL`). Never run the app as the owner. On Neon the console owner role bypasses RLS.
 - Policies use `NULLIF(current_setting('app.tenant_id', true), '')`: after a tenant transaction, Postgres returns `''` (not NULL) on that connection. Do not simplify it.

@@ -24,10 +24,16 @@ try {
     END IF;
   END $$`)
 
-  // Fail closed: never leave a role that can bypass RLS, whatever created it.
-  const { rows } = await client.query("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'saas_app'")
-  if (rows[0]?.rolsuper || rows[0]?.rolbypassrls) {
-    throw new Error('saas_app is superuser or BYPASSRLS; drop and recreate it (DROP OWNED BY saas_app; DROP ROLE saas_app)')
+  // Fail closed on a pre-existing role too: it must have exactly the least-privilege attributes.
+  // (They are verified, not ALTERed: a non-superuser owner such as Neon's cannot change some of them.)
+  const { rows } = await client.query(
+    "SELECT rolsuper, rolbypassrls, rolcreatedb, rolcreaterole, rolcanlogin FROM pg_roles WHERE rolname = 'saas_app'",
+  )
+  const r = rows[0]
+  if (r?.rolsuper || r?.rolbypassrls || r?.rolcreatedb || r?.rolcreaterole || !r?.rolcanlogin) {
+    throw new Error(
+      `saas_app has unexpected attributes (${JSON.stringify(r)}); it must be LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE. Drop and recreate it: DROP OWNED BY saas_app; DROP ROLE saas_app;`,
+    )
   }
 
   await client.query('GRANT USAGE ON SCHEMA public TO saas_app')

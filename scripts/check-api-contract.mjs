@@ -14,6 +14,8 @@ const EXEMPTIONS = join(root, 'scripts/api-contract.exemptions.json')
 const ROUTE_FILE = /^(.*)\.(get|post|put|patch|delete)\.ts$/
 const REQUIRED_META = ['operationId:', 'tags:', 'description:', 'responses:']
 
+const errors = []
+
 function* files(dir) {
   if (!existsSync(dir)) return
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -26,12 +28,15 @@ function* files(dir) {
 function routeOf(file) {
   const rel = relative(API_DIR, file).split(sep).join('/')
   const m = ROUTE_FILE.exec(rel)
-  if (!m) return null
+  // A file the checker cannot map to a route must not be skipped silently: it would escape the rule.
+  if (!m) {
+    errors.push(`${rel}: name it <name>.<get|post|put|patch|delete>.ts (one handler per method) so its OpenAPI doc and MCP tool can be checked`)
+    return null
+  }
   const path = m[1].replace(/\/?index$/, '').replace(/\[\.\.\.(\w+)\]/g, '{$1}').replace(/\[(\w+)\]/g, '{$1}')
   return { route: `${m[2].toUpperCase()} /api${path ? '/' + path : ''}`, rel }
 }
 
-const errors = []
 const routes = new Map()
 const operationIds = new Map()
 
@@ -45,7 +50,7 @@ for (const file of files(API_DIR)) {
     continue
   }
   for (const key of REQUIRED_META) if (!src.includes(key)) errors.push(`${r.route}: OpenAPI metadata is missing \`${key}\``)
-  const id = /operationId:\s*'([^']+)'/.exec(src)?.[1]
+  const id = /operationId:\s*(['"`])([^'"`]+)\1/.exec(src)?.[2]
   if (id) {
     if (operationIds.has(id)) errors.push(`${r.route}: operationId '${id}' already used by ${operationIds.get(id)}`)
     operationIds.set(id, r.route)

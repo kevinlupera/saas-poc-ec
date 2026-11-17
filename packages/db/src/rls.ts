@@ -13,6 +13,8 @@ export function tenantRlsSql(table: string): string {
   return [
     `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY;`,
     `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY;`,
+    // Idempotent: a later migration can re-run this to upgrade policies created by an older version.
+    `DROP POLICY IF EXISTS tenant_isolation ON "${table}";`,
     `CREATE POLICY tenant_isolation ON "${table}"`,
     `  USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), ''))`,
     `  WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), ''));`,
