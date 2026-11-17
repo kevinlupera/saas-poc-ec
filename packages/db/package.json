@@ -4,13 +4,17 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema.ts"
+    "./schema": "./src/schema.ts",
+    "./tenant": "./src/tenant.ts",
+    "./rls": "./src/rls.ts"
   },
   "description": "Driven adapter: Drizzle + Postgres client, schema and migrations.",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:app-role": "node src/setup-app-role.ts",
+    "test:db": "node --test \"test/**/*.test.ts\""
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",

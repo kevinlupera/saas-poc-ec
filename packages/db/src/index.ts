@@ -32,3 +32,6 @@ export async function findFirstTenantId(db: Db, userId: string): Promise<string 
     .limit(1)
   return row?.id
 }
+
+export { withTenant, type Tx } from './tenant.ts'
+export { tenantRlsSql } from './rls.ts'

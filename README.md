@@ -32,6 +32,8 @@ pnpm dev:api         # or just one: dev:api | dev:web | dev:mcp
 pnpm mcp:inspect     # MCP Inspector UI → Streamable HTTP, http://localhost:3002/mcp (OAuth via apps/api)
 docker compose up -d # Postgres on :5433
 pnpm --filter @saas/db db:migrate
+pnpm --filter @saas/db db:app-role   # runtime DB role without BYPASSRLS (idempotent)
+pnpm test:db                         # RLS / tenant isolation tests against Postgres
 pnpm test            # core, auth, api and mcp tests
 pnpm e2e:tenant      # tenant isolation smoke test (api + Postgres running)
 pnpm e2e:oauth       # OAuth + MCP smoke test (api, mcp + Postgres running)
@@ -92,13 +94,19 @@ curl -s -X POST localhost:3002/mcp \
 | api | `NITRO_WEB_ORIGIN` | `http://localhost:3000` | Origin allowed by CORS |
 | mcp | `NITRO_API_BASE` | `http://localhost:3001` | API URL |
 | api | `NITRO_AUTH_SECRET` | *(required, 32+ chars)* | Better Auth secret |
-| api | `NITRO_DATABASE_URL` | `postgres://saas:saas@localhost:5433/saas` | Postgres |
+| api | `NITRO_DATABASE_URL` | `postgres://saas_app:saas_app@localhost:5433/saas` | Postgres, as the `saas_app` runtime role (never the owner) |
 | api | `NITRO_AUTH_BASE_URL` | `http://localhost:3001` | Public API URL |
 | api, mcp | `NITRO_MCP_RESOURCE` | `http://localhost:3002/mcp` | MCP resource URL (token audience) |
 | mcp | `NITRO_AUTH_ISSUER` | `http://localhost:3001/api/auth` | OAuth issuer (JWKS at `<issuer>/jwks`) |
 | db | `DATABASE_URL` | `postgres://saas:saas@localhost:5433/saas` | Used by drizzle-kit migrations. On Neon use the **direct** (non-pooled) string |
 
 `apps/api` refuses to boot with an invalid config (the error names the offending keys, never the values). Copy `apps/api/.env.example` to `apps/api/.env` and set `NITRO_AUTH_SECRET`. The local Postgres moved from port 5432 to 5433: update any `DATABASE_URL` you had pointing at 5432.
+
+## Multi-tenancy (tenant_id + RLS)
+
+`tenantId` is the organization id. Business tables carry `tenant_id text not null` and enable RLS with `tenantRlsSql('<table>')` from `@saas/db` inside the migration that creates them. Data access goes through `withTenant(db, tenantId, tx => ...)`, which sets the RLS context for one transaction; without it every policy returns no rows.
+
+RLS is ignored by superusers, roles with `BYPASSRLS` and (without `FORCE`) the table owner. So: migrate with the owner (`DATABASE_URL`), run the app as `saas_app` (`NITRO_DATABASE_URL`). On Neon the console-created owner role bypasses RLS: run `db:app-role` against the owner string, then use the `saas_app` pooled string for the app. `pnpm test:db` fails if a business table lacks `tenant_id` or forced RLS, or if the app role can bypass RLS.
 
 ## Architecture (hexagonal)
 
