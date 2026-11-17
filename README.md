@@ -108,6 +108,13 @@ curl -s -X POST localhost:3002/mcp \
 
 ## Deployment
 
+The Nitro preset is chosen at build time, so the host is not fixed. The repo default is `aws_lambda`; override it with `NITRO_PRESET`, e.g. for any Node host (VPS, Coolify, Fly, Railway, Docker):
+
+```bash
+NITRO_PRESET=node-server pnpm --filter @saas/api build
+PORT=3001 NITRO_AUTH_SECRET=... NITRO_DATABASE_URL=... node apps/api/.output/server/index.mjs
+```
+
 - `apps/api` and `apps/mcp`: AWS Lambda, using Nitro's `aws_lambda` preset.
 - `apps/web`: static via `nuxt generate`, hosted on S3 + CloudFront.
 
