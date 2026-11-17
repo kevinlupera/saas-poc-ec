@@ -4,7 +4,27 @@
   "type": "module",
   "description": "Nuxt layer: shared components, composables and theme. Nuxt apps only.",
   "main": "./nuxt.config.ts",
+  "scripts": {
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck"
+  },
   "peerDependencies": {
     "nuxt": "^4.6.4"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^1.0.0",
+    "radix-vue": "^1.9.17",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@nuxt/kit": "^4.6.4",
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "nuxt": "^4.6.4",
+    "tailwindcss": "^3.4.19",
+    "tailwindcss-animate": "^1.0.7",
+    "vue": "^3.5.45",
+    "vue-tsc": "^3.3.14"
   }
 }

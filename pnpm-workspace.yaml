@@ -3,6 +3,7 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
+  vue-demi: true
   workerd: true
 minimumReleaseAgeExclude:
   - '@pnpm/exe@11.28.12'
