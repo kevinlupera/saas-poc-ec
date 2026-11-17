@@ -66,7 +66,10 @@ test('fails on a tool pointing at a missing route', () => {
 test('exemption works, needs a real reason, and goes stale once a tool exists', () => {
   const files = { [api('ping.get.ts')]: META('ping') }
   assert.equal(run(files, [{ route: 'GET /api/ping', reason: 'pending delegation model decision' }]).code, 0)
-  assert.match(run(files, [{ route: 'GET /api/ping', reason: 'todo' }]).out, /real reason/)
+  const weak = run(files, [{ route: 'GET /api/ping', reason: 'todo' }])
+  assert.equal(weak.code, 1)
+  assert.match(weak.out, /real reason/)
   const stale = run({ ...files, 'apps/mcp/server/tools/ping.ts': tool('GET /api/ping') }, [{ route: 'GET /api/ping', reason: 'pending delegation model decision' }])
+  assert.equal(stale.code, 1)
   assert.match(stale.out, /stale/)
 })

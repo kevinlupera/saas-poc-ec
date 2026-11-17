@@ -59,7 +59,7 @@ Open decision: **how tools call the API on behalf of the user.** Forwarding the 
 - Policies use `NULLIF(current_setting('app.tenant_id', true), '')`: after a tenant transaction, Postgres returns `''` (not NULL) on that connection. Do not simplify it.
 - Authorization: `authorizeAction(principal, action, tenantId)` from core on every tenant route (`requireAccess` in `apps/api/server/utils/principal.ts`). Wrong tenant and missing permission return the same 403, so tenants are never revealed.
 - API keys belong to an organization and carry explicit scopes. Better Auth rejects client-set `permissions`; keys are created server-side (`POST /api/tenants/{tenantId}/api-keys`), and nobody can grant a scope they do not hold. Keys can never hold `apikeys:manage`.
-- MCP access tokens carry `tenant_id`: the consent is tied to the session's active organization (`postLogin.consentReferenceId`) and the claim is only emitted while the user is still a member. There is no tenant picker yet: a user in several tenants authorizes the active one.
+- MCP access tokens carry `tenant_id`: the consent is tied to the session's active organization (`postLogin.consentReferenceId`) and the claim is only emitted if the user is a member when the token is issued or refreshed. It is not proof of current membership: anything that uses `tenant_id` must still authorize against current membership (`authorizeAction`). There is no tenant picker yet: a user in several tenants authorizes the active one.
 - Requests are logged as JSON with `tenantId` (including denied ones). Log the pathname only, never query strings or config.
 
 ## Platform staff and 2FA

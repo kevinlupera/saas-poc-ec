@@ -8,7 +8,7 @@ C=$(curl -s -m 30 -i -X POST $B/api/auth/sign-up/email -H "$J" -H "$O" -d "{\"em
 ORG=$(curl -s -m 30 -X POST $B/api/auth/organization/create -H "$J" -H "$O" -H "cookie: $C" -d "{\"name\":\"p\",\"slug\":\"p$S\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
 CID=$(curl -s -m 30 -X POST $B/api/auth/oauth2/create-client -H "$J" -H "$O" -H "cookie: $C" -d "{\"client_name\":\"e2e\",\"application_type\":\"native\",\"redirect_uris\":[\"$RED\"],\"token_endpoint_auth_method\":\"none\",\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"scope\":\"openid profile email offline_access\"}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('client_id') or d)")
 echo "client: $CID"
-[ -n "$C" ] && [ -n "$ORG" ] && [[ "$CID" != *Unauthorized* ]] && [ -n "$CID" ] || { echo "FAIL setup (sign-up/org/client)"; exit 1; }
+[ -n "$C" ] && [ -n "$ORG" ] && [[ "$CID" =~ ^[A-Za-z0-9_-]{16,}$ ]] || { echo "FAIL setup (sign-up/org/client)"; exit 1; }
 V=$(python3 -c "import secrets;print(secrets.token_urlsafe(48))"); CH=$(python3 -c "import hashlib,base64,sys;print(base64.urlsafe_b64encode(hashlib.sha256(sys.argv[1].encode()).digest()).rstrip(b'=').decode())" "$V")
 URL="$B/api/auth/oauth2/authorize?response_type=code&client_id=$CID&redirect_uri=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" $RED)&scope=openid%20profile&code_challenge=$CH&code_challenge_method=S256&state=xyz&resource=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" $RES)"
 echo "--- authorize (signed in)"; LOC=$(curl -s -m 30 -i "$URL" -H "cookie: $C" | grep -i '^location:' | sed 's/^[Ll]ocation: //' | tr -d '\r'); echo "$LOC" | cut -c1-160

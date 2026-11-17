@@ -10,6 +10,7 @@ import { findFirstTenantId, findMemberRole, type Db } from '@saas/db'
 import { betterAuth } from 'better-auth'
 import { admin, jwt, openAPI, organization } from 'better-auth/plugins'
 import { agentPrincipal } from './adapters/agent-principal.ts'
+import { consentTenant, tenantClaims } from './adapters/tenant-claim.ts'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { adminAc, defaultStatements, ownerAc } from 'better-auth/plugins/organization/access'
 
@@ -93,16 +94,10 @@ export function createAuth(config: AuthConfig) {
         postLogin: {
           page: `${config.webOrigin}/select-tenant`,
           shouldRedirect: () => false,
-          consentReferenceId: ({ session }) => {
-            const tenant = (session as { activeOrganizationId?: string | null }).activeOrganizationId
-            return tenant ?? undefined
-          },
+          consentReferenceId: ({ session }) => consentTenant(session as { activeOrganizationId?: string | null }),
         },
-        // `tenant_id` is only emitted when the user is still a member of that tenant.
-        customAccessTokenClaims: async ({ user, referenceId }) => {
-          if (!user || !referenceId) return {}
-          return (await findMemberRole(config.db, user.id, referenceId)) ? { tenant_id: referenceId } : {}
-        },
+        // `tenant_id` reflects membership at issue/refresh time only; consumers must re-authorize.
+        customAccessTokenClaims: (info) => tenantClaims((userId, tenantId) => findMemberRole(config.db, userId, tenantId), info),
       }),
       cimd({ fetchClientMetadataResource, metadataProfile: 'mcp-2026-07-28' }),
       i18n({ translations: locales }),
