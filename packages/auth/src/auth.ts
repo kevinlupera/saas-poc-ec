@@ -5,9 +5,11 @@ import { fetchClientMetadataResource } from '@better-auth/cimd/node'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { i18n, locales } from '@better-auth/i18n'
 import { mcp } from '@better-auth/mcp'
-import type { Db } from '@saas/db'
+import { authorizeAction } from '@saas/core'
+import { findMemberRole, type Db } from '@saas/db'
 import { betterAuth } from 'better-auth'
 import { admin, jwt, openAPI, organization } from 'better-auth/plugins'
+import { agentPrincipal } from './adapters/agent-principal.ts'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { adminAc, defaultStatements, ownerAc } from 'better-auth/plugins/organization/access'
 
@@ -22,14 +24,18 @@ export interface AuthConfig {
   mcpResource: string
 }
 
-const ac = createAccessControl(defaultStatements)
+const API_KEY_ALL = ['create', 'read', 'update', 'delete'] as const
+const ac = createAccessControl({ ...defaultStatements, apiKey: API_KEY_ALL })
 // Roles from docs/historias-de-usuario-2.md NA-13. Fine-grained rules live in @saas/core.
+// Only owner and admin manage the tenant's API keys.
 const roles = {
-  owner: ac.newRole(ownerAc.statements),
-  admin: ac.newRole(adminAc.statements),
+  owner: ac.newRole({ ...ownerAc.statements, apiKey: API_KEY_ALL }),
+  admin: ac.newRole({ ...adminAc.statements, apiKey: API_KEY_ALL }),
   recepcion: ac.newRole({ member: [], invitation: [] }),
   profesional: ac.newRole({ member: [], invitation: [] }),
 }
+
+export const API_KEY_CONFIG = 'org-keys'
 
 export function createAuth(config: AuthConfig) {
   return betterAuth({
@@ -42,15 +48,28 @@ export function createAuth(config: AuthConfig) {
       jwt(),
       organization({ ac, roles }),
       admin(),
-      apiKey(),
+      // Keys belong to a tenant (organization); their scopes live in `permissions.saas`.
+      apiKey([{ configId: API_KEY_CONFIG, defaultPrefix: 'org_', references: 'organization' }]),
       agentAuth({
         providerName: 'SaaS',
         providerDescription: 'Scheduling APIs for AI agents.',
         modes: ['delegated'],
-        capabilities: [{ name: 'whoami', description: 'Return the authenticated user id.' }],
-        async onExecute({ capability, agentSession }) {
-          if (capability === 'whoami') return { userId: agentSession.user.id }
-          throw new Error(`Unsupported capability: ${capability}`)
+        capabilities: [
+          {
+            name: 'whoami',
+            description: 'Return the agent identity inside one tenant (organization).',
+            input: { type: 'object', properties: { tenantId: { type: 'string' } }, required: ['tenantId'] },
+          },
+        ],
+        async onExecute({ capability, arguments: args, agentSession }) {
+          if (capability !== 'whoami') throw new Error(`Unsupported capability: ${capability}`)
+          const tenantId = typeof args?.tenantId === 'string' ? args.tenantId : undefined
+          if (!tenantId) throw new Error('tenantId is required')
+          // The agent acts for the user who approved it, only in tenants where that user is a member.
+          const memberRole = await findMemberRole(config.db, agentSession.user.id, tenantId)
+          const principal = agentPrincipal({ userId: agentSession.user.id, tenantId, memberRole })
+          authorizeAction(principal, 'agenda:own', tenantId)
+          return { tenantId, role: principal.role }
         },
       }),
       mcp({ loginPage: '/sign-in', consentPage: '/consent', resource: config.mcpResource }),
