@@ -7,6 +7,7 @@
     "dev:web": "pnpm --filter @saas/web dev",
     "dev:mcp": "pnpm --filter @saas/mcp dev",
     "build": "pnpm -r run build",
+    "test:db": "pnpm --filter @saas/db test:db",
     "e2e:tenant": "bash scripts/e2e-tenant.sh",
     "e2e:oauth": "bash scripts/e2e-oauth.sh",
     "check:boundaries": "node scripts/check-boundaries.mjs",
