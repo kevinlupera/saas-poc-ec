@@ -4,6 +4,12 @@ export default defineNitroConfig({
   compatibilityDate: '2025-07-15',
   preset: 'aws_lambda',
   srcDir: 'server',
+  // OpenAPI from the route handlers (`defineRouteMeta`). Docs at /_scalar, /_swagger, spec at /_openapi.json.
+  // Dev only on purpose: set `production` to expose them, and protect them if you do.
+  experimental: { openAPI: true },
+  openAPI: {
+    meta: { title: 'SaaS API', version: '0.1.0', description: 'Backend API. Every endpoint is documented here and exposed as an MCP tool.' },
+  },
   runtimeConfig: {
     // Origin allowed by CORS. Override with NITRO_WEB_ORIGIN.
     webOrigin: 'http://localhost:3000',

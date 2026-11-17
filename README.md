@@ -108,6 +108,10 @@ curl -s -X POST localhost:3002/mcp \
 
 RLS is ignored by superusers, roles with `BYPASSRLS` and (without `FORCE`) the table owner. So: migrate with the owner (`DATABASE_URL`), run the app as `saas_app` (`NITRO_DATABASE_URL`). On Neon the console-created owner role bypasses RLS: run `db:app-role` against the owner string with a strong `APP_DB_PASSWORD`, then use the `saas_app` pooled string for the app. The script verifies the role cannot bypass RLS and fails otherwise; running it again rotates the password to `APP_DB_PASSWORD`. `pnpm test:db` fails if a business table lacks `tenant_id` or forced RLS, or if the app role can bypass RLS.
 
+## Adding an endpoint
+
+Every endpoint needs OpenAPI metadata (`defineRouteMeta`) **and** an MCP tool (`apps/mcp/server/tools`, exporting `route = 'METHOD /api/...'`). `pnpm check:api` enforces it. Details and the exemption rule are in [AGENTS.md](./AGENTS.md). Docs are served in dev at `/_scalar`, `/_swagger` and `/_openapi.json`.
+
 ## Architecture (hexagonal)
 
 - `packages/core`: domain, ports and use cases. No framework dependencies (enforced by `check:boundaries`).

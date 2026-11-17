@@ -1,3 +1,40 @@
+defineRouteMeta({
+  openAPI: {
+    tags: ['tenants'],
+    operationId: 'createTenantApiKey',
+    summary: 'Create a tenant API key',
+    description:
+      'Requires `apikeys:manage` (owner, admin). Scopes are set by the server and callers can only grant scopes they hold. The key value is returned once.',
+    security: [{ sessionCookie: [] }, { apiKey: [] }],
+    parameters: [{ in: 'path', name: 'tenantId', required: true, description: 'Organization id', schema: { type: 'string' } }],
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['name', 'scopes'],
+            properties: {
+              name: { type: 'string', description: '1 to 100 characters' },
+              scopes: {
+                type: 'array',
+                description: 'At least one scope',
+                items: { type: 'string', enum: ['business:settings', 'business:revenue', 'members:invite', 'agenda:all', 'agenda:own'] },
+              },
+            },
+          },
+        },
+      },
+    },
+    responses: {
+      200: { description: 'The created key. The `key` field is shown only now.' },
+      400: { description: 'Invalid body, or a scope that keys cannot hold' },
+      401: { description: 'No valid credentials' },
+      403: { description: 'Not allowed to manage keys in this tenant, or granting a scope the caller lacks' },
+    },
+  },
+})
+
 import { GRANTABLE_SCOPES, SCOPE_RESOURCE, type Action } from '@saas/core'
 import { API_KEY_CONFIG } from '@saas/auth'
 import { z } from 'zod'

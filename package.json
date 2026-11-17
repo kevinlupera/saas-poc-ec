@@ -11,9 +11,10 @@
     "e2e:tenant": "bash scripts/e2e-tenant.sh",
     "e2e:oauth": "bash scripts/e2e-oauth.sh",
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:api": "node scripts/check-api-contract.mjs",
     "typecheck": "pnpm --filter @saas/api --filter @saas/mcp run types && pnpm -r run typecheck",
     "test": "pnpm -r --if-present run test",
-    "check": "pnpm check:boundaries && pnpm typecheck",
+    "check": "pnpm check:boundaries && pnpm check:api && pnpm typecheck",
     "mcp:inspect": "pnpm dlx @modelcontextprotocol/inspector@2.13.0"
   },
   "packageManager": "pnpm@11.28.12",
