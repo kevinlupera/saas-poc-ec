@@ -2,7 +2,7 @@
 // Config arrives as `unknown` (Nitro runtimeConfig) and is validated here, so this file
 // has no Nitro auto-imports and typechecks the same from api, mcp and web.
 import { betterAuthIdentity, createAuth } from '@saas/auth'
-import { makeAuthenticateRequest } from '@saas/core'
+import { authorizeAction, makeAuthenticateRequest } from '@saas/core'
 import { createDb } from '@saas/db'
 import { z } from 'zod'
 
@@ -33,7 +33,7 @@ function build(rawConfig: unknown) {
     trustedOrigins: [cfg.webOrigin],
     mcpResource: cfg.mcpResource,
   })
-  return { auth, authenticate: makeAuthenticateRequest(betterAuthIdentity(auth)) }
+  return { auth, authenticate: makeAuthenticateRequest(betterAuthIdentity(auth)), authorize: authorizeAction }
 }
 
 /** Built once per Lambda container. */

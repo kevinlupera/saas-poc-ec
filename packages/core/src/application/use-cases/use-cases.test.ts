@@ -43,6 +43,8 @@ test('api key: no scopes means no access, scopes grant only what they list', () 
 
 test('scopesFromPermissions keeps valid actions and drops the rest', () => {
   assert.deepEqual(scopesFromPermissions({ saas: ['agenda:own', 'root', 3] }), ['agenda:own'])
+  // keys can never hold key management, even if stored that way
+  assert.deepEqual(scopesFromPermissions({ saas: ['apikeys:manage', 'agenda:all'] }), ['agenda:all'])
   assert.deepEqual(scopesFromPermissions({ other: ['agenda:own'] }), [])
   assert.deepEqual(scopesFromPermissions(null), [])
 })
@@ -50,4 +52,10 @@ test('scopesFromPermissions keeps valid actions and drops the rest', () => {
 test('asRole only accepts known roles', () => {
   assert.equal(asRole('admin'), 'admin')
   assert.equal(asRole('superuser'), undefined)
+})
+
+test('only owner and admin manage api keys', () => {
+  assert.doesNotThrow(() => authorizeAction(user('admin'), 'apikeys:manage', 't1'))
+  assert.throws(() => authorizeAction(user('recepcion'), 'apikeys:manage', 't1'), ForbiddenError)
+  assert.throws(() => authorizeAction(user('profesional'), 'apikeys:manage', 't1'), ForbiddenError)
 })
