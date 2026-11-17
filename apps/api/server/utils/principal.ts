@@ -1,5 +1,5 @@
 import { ForbiddenError, UnauthenticatedError, type Action, type Principal } from '@saas/core'
-import { createError } from 'h3'
+import { createError, type H3Event } from 'h3'
 import { getContainer } from './container'
 
 /** Maps core errors to HTTP. Anything else is a real failure and keeps bubbling up. */
@@ -10,9 +10,12 @@ function toHttp(e: unknown): never {
 }
 
 /** Resolve the caller (session cookie or tenant API key) or answer 401. */
-export async function requirePrincipal(headers: Headers, rawConfig: unknown) {
+export async function requirePrincipal(event: H3Event, rawConfig: unknown) {
   try {
-    return await getContainer(rawConfig).authenticate(headers)
+    const principal = await getContainer(rawConfig).authenticate(event.headers)
+    event.context.principalId = principal.id
+    event.context.principalKind = principal.kind
+    return principal
   } catch (e) {
     return toHttp(e)
   }
@@ -28,8 +31,10 @@ export function assertAllowed(rawConfig: unknown, principal: Principal, action: 
 }
 
 /** Authenticate and authorize `action` inside `tenantId`: 401 without identity, 403 otherwise. */
-export async function requireAccess(headers: Headers, rawConfig: unknown, action: Action, tenantId: string) {
-  const principal = await requirePrincipal(headers, rawConfig)
+export async function requireAccess(event: H3Event, rawConfig: unknown, action: Action, tenantId: string) {
+  // Logged even when access is denied, so cross-tenant attempts are visible.
+  event.context.tenantId = tenantId
+  const principal = await requirePrincipal(event, rawConfig)
   assertAllowed(rawConfig, principal, action, tenantId)
   return principal
 }

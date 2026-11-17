@@ -16,7 +16,7 @@ const Body = z.object({
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
   const tenantId = getRouterParam(event, 'tenantId') ?? ''
-  const principal = await requireAccess(event.headers, config, 'apikeys:manage', tenantId)
+  const principal = await requireAccess(event, config, 'apikeys:manage', tenantId)
   const body = await readValidatedBody(event, Body.parse)
 
   // Nobody can hand out more than they hold.
