@@ -21,7 +21,7 @@ Dependency rule: `apps/* -> auth/db -> core`. `core` imports nothing from better
 
 ```bash
 pnpm check            # boundaries + API contract + typecheck (run before every commit)
-pnpm test             # unit tests: core, auth, db (pure), api, mcp
+pnpm test             # unit tests: core, auth, db (pure), api, mcp, scripts (check:api)
 pnpm test:db          # RLS / tenant isolation against Postgres (docker compose up -d first)
 pnpm e2e:tenant       # tenant isolation over HTTP (api + Postgres running)
 pnpm e2e:oauth        # OAuth authorize -> consent -> token -> /mcp (api + mcp + Postgres running)

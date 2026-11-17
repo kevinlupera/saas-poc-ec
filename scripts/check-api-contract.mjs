@@ -7,7 +7,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const root = fileURLToPath(new URL('..', import.meta.url))
+// API_CONTRACT_ROOT lets the test suite point the checker at fixture trees.
+const root = process.env.API_CONTRACT_ROOT ?? fileURLToPath(new URL('..', import.meta.url))
 const API_DIR = join(root, 'apps/api/server/api')
 const TOOLS_DIR = join(root, 'apps/mcp/server/tools')
 const EXEMPTIONS = join(root, 'scripts/api-contract.exemptions.json')
