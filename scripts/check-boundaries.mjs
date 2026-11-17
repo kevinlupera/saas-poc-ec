@@ -18,11 +18,13 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 /** folder → forbidden dependencies (and why) */
 const rules = {
   // The browser never touches the database or server-side logic.
-  'apps/web': ['@saas/core', '@saas/db', 'drizzle-orm'],
+  'apps/web': ['@saas/core', '@saas/db', '@saas/auth', 'drizzle-orm', 'better-auth'],
   // Shared contract: plain TypeScript, no frameworks, no higher layers.
-  'packages/shared': ['@saas/core', '@saas/db', '@saas/ui', 'vue', 'nuxt', 'nitropack', 'drizzle-orm'],
+  'packages/shared': ['@saas/core', '@saas/db', '@saas/auth', '@saas/ui', 'vue', 'nuxt', 'nitropack', 'drizzle-orm'],
+  // Hexagonal core: domain + ports + use cases. No frameworks, no adapters.
+  'packages/core': ['@saas/db', '@saas/auth', '@saas/ui', 'better-auth', 'drizzle-orm', 'pg', 'nitropack', 'h3', 'vue', 'nuxt'],
   // UI only knows the shared contract, never the database or use cases.
-  'packages/ui': ['@saas/core', '@saas/db', 'drizzle-orm'],
+  'packages/ui': ['@saas/core', '@saas/db', '@saas/auth', 'drizzle-orm', 'better-auth'],
 }
 
 const SKIP_DIRS = new Set(['node_modules', '.nuxt', '.nitro', '.output', '.wrangler', 'dist'])
