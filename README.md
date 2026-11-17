@@ -94,7 +94,7 @@ curl -s -X POST localhost:3002/mcp \
 | api | `NITRO_AUTH_BASE_URL` | `http://localhost:3001` | Public API URL |
 | api, mcp | `NITRO_MCP_RESOURCE` | `http://localhost:3002/mcp` | MCP resource URL (token audience) |
 | mcp | `NITRO_AUTH_ISSUER` | `http://localhost:3001/api/auth` | OAuth issuer (JWKS at `<issuer>/jwks`) |
-| db | `DATABASE_URL` | `postgres://saas:saas@localhost:5433/saas` | Used by drizzle-kit |
+| db | `DATABASE_URL` | `postgres://saas:saas@localhost:5433/saas` | Used by drizzle-kit migrations. On Neon use the **direct** (non-pooled) string |
 
 ## Architecture (hexagonal)
 
@@ -118,7 +118,7 @@ pnpm --filter @saas/mcp build
 
 For each app, zip the **contents** of its `.output/` directory (so `server/` is at the archive root), then upload to a separate Lambda with the **Node.js 22.x** runtime and handler **`server/index.handler`**. Expose each function through an API Gateway HTTP API with a proxy integration (payload format 2.0) or a Lambda Function URL. The MCP uses stateless JSON responses; Lambda response streaming is not required.
 
-Set `NITRO_WEB_ORIGIN` on the API to the frontend origin, `NITRO_API_BASE` on the MCP to the deployed API URL, and `NUXT_PUBLIC_API_BASE` **when building the static frontend** to that same API URL. Set `NITRO_AUTH_SECRET`, `NITRO_DATABASE_URL` (use RDS Proxy or a pooler: each Lambda container opens one connection), `NITRO_AUTH_BASE_URL`, `NITRO_MCP_RESOURCE` and `NITRO_AUTH_ISSUER`.
+Set `NITRO_WEB_ORIGIN` on the API to the frontend origin, `NITRO_API_BASE` on the MCP to the deployed API URL, and `NUXT_PUBLIC_API_BASE` **when building the static frontend** to that same API URL. Set `NITRO_AUTH_SECRET`, `NITRO_DATABASE_URL` (Neon: use the pooled `-pooler` connection string with `sslmode=require`; each instance opens one connection), `NITRO_AUTH_BASE_URL`, `NITRO_MCP_RESOURCE` and `NITRO_AUTH_ISSUER`.
 
 Use `pnpm dev:api` and `pnpm dev:mcp` for local development. The Lambda build exports a handler rather than a local HTTP server. The old Wrangler `preview` and `deploy` scripts have been removed; AWS infrastructure and deployment automation are not configured in this repository.
 
