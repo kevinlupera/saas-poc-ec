@@ -1,3 +1,4 @@
+import type { PlatformRole } from './platform.ts'
 import type { Action, Role } from './role.ts'
 
 /** Who is calling, independent of how they authenticated. */
@@ -10,4 +11,8 @@ export interface Principal {
   role?: Role
   /** Explicit grants, used by API keys (no role). Never widen beyond what the key holds. */
   scopes?: readonly Action[]
+  /** Platform staff role. Only set when the staff member has a verified second factor. */
+  platformRole?: PlatformRole
+  /** Staff that must enroll in 2FA before any platform access. */
+  twoFactorRequired?: boolean
 }
