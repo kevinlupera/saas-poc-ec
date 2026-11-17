@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Tenant isolation smoke test. Needs apps/api running on :3001 (NITRO_AUTH_SECRET set) and migrated Postgres.
+# Tenant isolation smoke test. Needs apps/api running on :3001 (NITRO_AUTH_SECRET set) and Postgres migrated
+# with the saas_app role created (`APP_DB_PASSWORD=saas_app pnpm --filter @saas/db db:app-role`).
 # Creates throwaway users/orgs. Exits non-zero if any expectation fails.
 set -u
 B=http://localhost:3001; O='origin: http://localhost:3000'; J='content-type: application/json'

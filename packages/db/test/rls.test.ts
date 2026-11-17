@@ -59,6 +59,16 @@ test('tenant context does not leak to the next transaction on the same connectio
   assert.equal(rows.length, 0)
 })
 
+test('rows with an empty tenant_id are never visible, even after a tenant context ran on the connection', async () => {
+  // Postgres reports '' (not NULL) for a custom setting once it was set in an earlier transaction.
+  await owner.query("insert into rls_probe (tenant_id, secret) values ('', 'empty-tenant-secret')")
+  await secrets('tenant-a') // sets app.tenant_id locally; pool max is 1, so the same connection is reused
+  const { rows } = await app.execute(sql`select secret from rls_probe`)
+  assert.equal(rows.length, 0)
+  assert.deepEqual(await secrets('tenant-a'), ['a-secret'])
+  await owner.query("delete from rls_probe where tenant_id = ''")
+})
+
 test('a tenant cannot write rows for another tenant', async () => {
   await assert.rejects(
     withTenant(app, 'tenant-a', (tx) => tx.execute(sql`insert into rls_probe (tenant_id, secret) values ('tenant-b', 'planted')`)),

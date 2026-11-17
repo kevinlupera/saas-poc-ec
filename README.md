@@ -32,7 +32,7 @@ pnpm dev:api         # or just one: dev:api | dev:web | dev:mcp
 pnpm mcp:inspect     # MCP Inspector UI → Streamable HTTP, http://localhost:3002/mcp (OAuth via apps/api)
 docker compose up -d # Postgres on :5433
 pnpm --filter @saas/db db:migrate
-pnpm --filter @saas/db db:app-role   # runtime DB role without BYPASSRLS (idempotent)
+APP_DB_PASSWORD=saas_app pnpm --filter @saas/db db:app-role   # runtime DB role without BYPASSRLS (needs the password; use a real secret outside local dev)
 pnpm test:db                         # RLS / tenant isolation tests against Postgres
 pnpm test            # core, auth, api and mcp tests
 pnpm e2e:tenant      # tenant isolation smoke test (api + Postgres running)
@@ -106,7 +106,7 @@ curl -s -X POST localhost:3002/mcp \
 
 `tenantId` is the organization id. Business tables carry `tenant_id text not null` and enable RLS with `tenantRlsSql('<table>')` from `@saas/db` inside the migration that creates them. Data access goes through `withTenant(db, tenantId, tx => ...)`, which sets the RLS context for one transaction; without it every policy returns no rows.
 
-RLS is ignored by superusers, roles with `BYPASSRLS` and (without `FORCE`) the table owner. So: migrate with the owner (`DATABASE_URL`), run the app as `saas_app` (`NITRO_DATABASE_URL`). On Neon the console-created owner role bypasses RLS: run `db:app-role` against the owner string, then use the `saas_app` pooled string for the app. `pnpm test:db` fails if a business table lacks `tenant_id` or forced RLS, or if the app role can bypass RLS.
+RLS is ignored by superusers, roles with `BYPASSRLS` and (without `FORCE`) the table owner. So: migrate with the owner (`DATABASE_URL`), run the app as `saas_app` (`NITRO_DATABASE_URL`). On Neon the console-created owner role bypasses RLS: run `db:app-role` against the owner string with a strong `APP_DB_PASSWORD`, then use the `saas_app` pooled string for the app. The script verifies the role cannot bypass RLS and fails otherwise; running it again rotates the password to `APP_DB_PASSWORD`. `pnpm test:db` fails if a business table lacks `tenant_id` or forced RLS, or if the app role can bypass RLS.
 
 ## Architecture (hexagonal)
 

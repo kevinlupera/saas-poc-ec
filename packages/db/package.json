@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:app-role": "node src/setup-app-role.ts",
-    "test:db": "node --test \"test/**/*.test.ts\""
+    "test:db": "node --test \"test/**/*.test.ts\"",
+    "test": "node --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
