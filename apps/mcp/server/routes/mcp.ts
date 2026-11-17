@@ -9,10 +9,13 @@ import { registerApiStatus } from '../tools/api-status'
  * Protected by OAuth: bearer JWTs issued by apps/api. Unauthenticated calls get the
  * RFC 9728 `WWW-Authenticate` challenge. Each request creates its own server + transport.
  */
+let protectedHandler: ReturnType<typeof createMcpProtectedRequestHandler> | undefined
+
 export default defineEventHandler((event) => {
   const { apiBase, authIssuer, mcpResource } = useRuntimeConfig(event)
 
-  const handler = createMcpProtectedRequestHandler(
+  // Built once per instance so the verifier keeps its JWKS cache between requests.
+  protectedHandler ??= createMcpProtectedRequestHandler(
     { issuer: authIssuer, audience: mcpResource, jwksUrl: `${authIssuer}/jwks` },
     async (request) => {
       const server = new McpServer(
@@ -30,5 +33,5 @@ export default defineEventHandler((event) => {
       return transport.handleRequest(request)
     },
   )
-  return handler(toWebRequest(event))
+  return protectedHandler(toWebRequest(event))
 })
