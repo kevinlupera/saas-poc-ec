@@ -5,6 +5,7 @@ allowBuilds:
   esbuild: true
   vue-demi: true
   workerd: true
+  lefthook: true
 minimumReleaseAgeExclude:
   - '@pnpm/exe@11.28.12'
   - '@pnpm/linux-arm64@11.28.12'

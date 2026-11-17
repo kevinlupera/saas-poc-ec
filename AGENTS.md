@@ -28,6 +28,8 @@ pnpm e2e:oauth        # OAuth authorize -> consent -> token -> /mcp (api + mcp +
 APP_DB_PASSWORD=saas_app pnpm --filter @saas/db db:app-role   # runtime DB role (after db:migrate)
 ```
 
+Git hooks (lefthook, `lefthook.yml`, installed by `pnpm install`): pre-commit runs `check:boundaries` and `check:api` on backend changes; commit-msg enforces Conventional Commits and rejects Co-Authored-By/AI attribution lines; pre-push runs `pnpm check` and `pnpm test`. Skip once with `LEFTHOOK=0` only if you must; never weaken the hooks to make a commit pass.
+
 Auth schema changes: `pnpm --filter @saas/auth auth:schema`, then `pnpm --filter @saas/db db:generate`.
 
 ## API contract (mandatory for every new endpoint)
