@@ -17,8 +17,9 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 
 /** folder → forbidden dependencies (and why) */
 const rules = {
-  // The browser never touches the database or server-side logic.
-  'apps/web': ['@saas/core', '@saas/db', '@saas/auth', 'drizzle-orm', 'better-auth'],
+  // The browser never touches the database or server-side logic. It may use the Better Auth
+  // *client* (`better-auth/client`, `@better-auth/oauth-provider/client`), never the server package.
+  'apps/web': ['@saas/core', '@saas/db', '@saas/auth', 'drizzle-orm'],
   // Shared contract: plain TypeScript, no frameworks, no higher layers.
   'packages/shared': ['@saas/core', '@saas/db', '@saas/auth', '@saas/ui', 'vue', 'nuxt', 'nitropack', 'drizzle-orm'],
   // Hexagonal core: domain + ports + use cases. No frameworks, no adapters.

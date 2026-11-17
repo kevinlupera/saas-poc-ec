@@ -11,11 +11,13 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@better-auth/oauth-provider": "^1.7.25",
     "@saas/shared": "workspace:*",
+    "@saas/ui": "workspace:*",
+    "better-auth": "^1.7.25",
     "nuxt": "^4.6.4",
     "vue": "^3.5.45",
-    "vue-router": "^5.4.0",
-    "@saas/ui": "workspace:*"
+    "vue-router": "^5.4.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

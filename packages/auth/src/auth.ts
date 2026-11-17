@@ -6,7 +6,7 @@ import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { i18n, locales } from '@better-auth/i18n'
 import { mcp } from '@better-auth/mcp'
 import { authorizeAction } from '@saas/core'
-import { findMemberRole, type Db } from '@saas/db'
+import { findFirstTenantId, findMemberRole, type Db } from '@saas/db'
 import { betterAuth } from 'better-auth'
 import { admin, jwt, openAPI, organization } from 'better-auth/plugins'
 import { agentPrincipal } from './adapters/agent-principal.ts'
@@ -20,6 +20,8 @@ export interface AuthConfig {
   baseURL: string
   /** Browser origin(s) allowed to call the auth endpoints. */
   trustedOrigins: string[]
+  /** Origin of the web app that hosts the /sign-in and /consent pages. */
+  webOrigin: string
   /** Canonical HTTPS URL of the MCP resource, must match what apps/mcp serves. */
   mcpResource: string
 }
@@ -44,6 +46,16 @@ export function createAuth(config: AuthConfig) {
     baseURL: config.baseURL,
     trustedOrigins: config.trustedOrigins,
     emailAndPassword: { enabled: true },
+    databaseHooks: {
+      session: {
+        create: {
+          // Every session starts in the user's first tenant, so a tenant is active before any client code runs.
+          before: async (session) => ({
+            data: { ...session, activeOrganizationId: await findFirstTenantId(config.db, session.userId) },
+          }),
+        },
+      },
+    },
     plugins: [
       jwt(),
       organization({ ac, roles }),
@@ -72,7 +84,7 @@ export function createAuth(config: AuthConfig) {
           return { tenantId, role: principal.role }
         },
       }),
-      mcp({ loginPage: '/sign-in', consentPage: '/consent', resource: config.mcpResource }),
+      mcp({ loginPage: `${config.webOrigin}/sign-in`, consentPage: `${config.webOrigin}/consent`, resource: config.mcpResource }),
       cimd({ fetchClientMetadataResource, metadataProfile: 'mcp-2026-07-28' }),
       i18n({ translations: locales }),
       openAPI(),

@@ -5,6 +5,11 @@ export default defineNuxtConfig({
   extends: ['@saas/ui'],
   devtools: { enabled: true },
   build: { transpile: ['@saas/shared'] },
+  // Auth pages depend on the browser URL/session: render client-side only.
+  routeRules: {
+    '/sign-in': { ssr: false },
+    '/consent': { ssr: false },
+  },
   runtimeConfig: {
     public: {
       // Override with NUXT_PUBLIC_API_BASE.

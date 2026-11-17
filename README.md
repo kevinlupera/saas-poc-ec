@@ -32,7 +32,9 @@ pnpm dev:api         # or just one: dev:api | dev:web | dev:mcp
 pnpm mcp:inspect     # MCP Inspector UI → Streamable HTTP, http://localhost:3002/mcp (OAuth via apps/api)
 docker compose up -d # Postgres on :5433
 pnpm --filter @saas/db db:migrate
-pnpm test            # core, api and mcp tests
+pnpm test            # core, auth, api and mcp tests
+pnpm e2e:tenant      # tenant isolation smoke test (api + Postgres running)
+pnpm e2e:oauth       # OAuth + MCP smoke test (api, mcp + Postgres running)
 pnpm typecheck       # all three apps
 pnpm check           # check:boundaries + typecheck (use in CI)
 pnpm build

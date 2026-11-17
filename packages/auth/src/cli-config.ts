@@ -6,5 +6,6 @@ export const auth = createAuth({
   secret: 'cli-only-secret-cli-only-secret-123',
   baseURL: 'http://localhost:3001',
   trustedOrigins: [],
+  webOrigin: 'http://localhost:3000',
   mcpResource: 'https://localhost/mcp',
 })

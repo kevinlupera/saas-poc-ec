@@ -31,6 +31,7 @@ function build(rawConfig: unknown) {
     secret: cfg.authSecret,
     baseURL: cfg.authBaseUrl,
     trustedOrigins: [cfg.webOrigin],
+    webOrigin: cfg.webOrigin,
     mcpResource: cfg.mcpResource,
   })
   return { auth, authenticate: makeAuthenticateRequest(betterAuthIdentity(auth)), authorize: authorizeAction }

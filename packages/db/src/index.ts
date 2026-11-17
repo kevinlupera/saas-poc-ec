@@ -21,3 +21,14 @@ export async function findMemberRole(db: Db, userId: string, tenantId: string): 
     .limit(1)
   return row?.role
 }
+
+/** First tenant (organization) the user belongs to; used as the default active tenant at sign-in. */
+export async function findFirstTenantId(db: Db, userId: string): Promise<string | undefined> {
+  const [row] = await db
+    .select({ id: schema.member.organizationId })
+    .from(schema.member)
+    .where(eq(schema.member.userId, userId))
+    .orderBy(schema.member.createdAt)
+    .limit(1)
+  return row?.id
+}
