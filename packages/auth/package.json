@@ -1,0 +1,27 @@
+{
+  "name": "@saas/auth",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "Driven adapter: Better Auth configuration and IdentityProvider implementation.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "auth:schema": "pnpm dlx auth@1.7.25 generate --config src/cli-config.ts --adapter drizzle --dialect postgresql --output ../db/src/auth-schema.ts -y"
+  },
+  "dependencies": {
+    "@better-auth/agent-auth": "^0.6.2",
+    "@better-auth/api-key": "^1.7.25",
+    "@better-auth/cimd": "^1.7.25",
+    "@better-auth/drizzle-adapter": "^1.7.25",
+    "@better-auth/i18n": "^1.7.25",
+    "@better-auth/mcp": "^1.7.25",
+    "@saas/core": "workspace:*",
+    "@saas/db": "workspace:*",
+    "better-auth": "^1.7.25"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0"
+  }
+}
