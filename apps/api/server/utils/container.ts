@@ -1,13 +1,23 @@
 // Composition root: the only place that knows core, auth and db together.
-import { makeAuthenticateRequest } from '@saas/core'
+// Config arrives as `unknown` (Nitro runtimeConfig) and is validated here, so this file
+// has no Nitro auto-imports and typechecks the same from api, mcp and web.
 import { betterAuthIdentity, createAuth } from '@saas/auth'
+import { makeAuthenticateRequest } from '@saas/core'
 import { createDb } from '@saas/db'
+import { z } from 'zod'
+
+const ConfigSchema = z.object({
+  authSecret: z.string().min(32, 'NITRO_AUTH_SECRET must be at least 32 chars'),
+  databaseUrl: z.string().min(1),
+  authBaseUrl: z.url(),
+  webOrigin: z.string().min(1),
+  mcpResource: z.url(),
+})
 
 let cached: ReturnType<typeof build> | undefined
 
-function build(event: Parameters<typeof useRuntimeConfig>[0]) {
-  const cfg = useRuntimeConfig(event)
-  if (!cfg.authSecret) throw new Error('NITRO_AUTH_SECRET is required')
+function build(rawConfig: unknown) {
+  const cfg = ConfigSchema.parse(rawConfig)
   const auth = createAuth({
     db: createDb(cfg.databaseUrl),
     secret: cfg.authSecret,
@@ -18,5 +28,5 @@ function build(event: Parameters<typeof useRuntimeConfig>[0]) {
   return { auth, authenticate: makeAuthenticateRequest(betterAuthIdentity(auth)) }
 }
 
-/** Lazily built once per Lambda container. */
-export const useContainer = (event: Parameters<typeof useRuntimeConfig>[0]) => (cached ??= build(event))
+/** Built once per Lambda container. */
+export const getContainer = (rawConfig: unknown) => (cached ??= build(rawConfig))
