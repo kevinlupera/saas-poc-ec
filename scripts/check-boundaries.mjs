@@ -13,7 +13,8 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
-const root = fileURLToPath(new URL('..', import.meta.url))
+// BOUNDARIES_ROOT lets the test suite point the checker at fixture trees.
+const root = process.env.BOUNDARIES_ROOT ?? fileURLToPath(new URL('..', import.meta.url))
 
 /** folder → forbidden dependencies (and why) */
 const rules = {
@@ -66,7 +67,12 @@ for (const [dir, forbidden] of Object.entries(rules)) {
 
   for (const src of sourceFiles(pkgDir)) {
     for (const spec of importsOf(src)) {
-      if (!spec.startsWith('.')) continue
+      if (!spec.startsWith('.')) {
+        // A bare import of a forbidden package is a violation even if package.json does not list it.
+        const hit = forbidden.find((name) => spec === name || spec.startsWith(`${name}/`))
+        if (hit) errors.push(`${relative(root, src)} imports '${spec}' (${dir} must not use ${hit})`)
+        continue
+      }
       const target = resolve(dirname(src), spec)
       if (target !== pkgDir && !target.startsWith(pkgDir + sep)) {
         errors.push(`${relative(root, src)} imports '${spec}', outside ${dir}`)
