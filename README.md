@@ -32,7 +32,7 @@ pnpm dev:api         # or just one: dev:api | dev:web | dev:mcp
 pnpm mcp:inspect     # MCP Inspector UI → Streamable HTTP, http://localhost:3002/mcp (OAuth via apps/api)
 docker compose up -d # Postgres on :5433
 pnpm --filter @saas/db db:migrate
-pnpm --filter @saas/core test
+pnpm test            # core, api and mcp tests
 pnpm typecheck       # all three apps
 pnpm check           # check:boundaries + typecheck (use in CI)
 pnpm build
@@ -95,6 +95,8 @@ curl -s -X POST localhost:3002/mcp \
 | api, mcp | `NITRO_MCP_RESOURCE` | `http://localhost:3002/mcp` | MCP resource URL (token audience) |
 | mcp | `NITRO_AUTH_ISSUER` | `http://localhost:3001/api/auth` | OAuth issuer (JWKS at `<issuer>/jwks`) |
 | db | `DATABASE_URL` | `postgres://saas:saas@localhost:5433/saas` | Used by drizzle-kit migrations. On Neon use the **direct** (non-pooled) string |
+
+`apps/api` refuses to boot with an invalid config (the error names the offending keys, never the values). Copy `apps/api/.env.example` to `apps/api/.env` and set `NITRO_AUTH_SECRET`. The local Postgres moved from port 5432 to 5433: update any `DATABASE_URL` you had pointing at 5432.
 
 ## Architecture (hexagonal)
 

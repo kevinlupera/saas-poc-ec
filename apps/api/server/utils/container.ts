@@ -14,10 +14,18 @@ const ConfigSchema = z.object({
   mcpResource: z.url(),
 })
 
+/** Validates runtime config. Error names the offending keys only, never their values. */
+export function parseConfig(rawConfig: unknown) {
+  const result = ConfigSchema.safeParse(rawConfig)
+  if (result.success) return result.data
+  const keys = [...new Set(result.error.issues.map((i) => i.path.join('.')))].join(', ')
+  throw new Error(`Invalid server configuration: ${keys}`)
+}
+
 let cached: ReturnType<typeof build> | undefined
 
 function build(rawConfig: unknown) {
-  const cfg = ConfigSchema.parse(rawConfig)
+  const cfg = parseConfig(rawConfig)
   const auth = createAuth({
     db: createDb(cfg.databaseUrl),
     secret: cfg.authSecret,
