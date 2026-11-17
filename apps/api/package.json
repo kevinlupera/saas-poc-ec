@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@saas/shared": "workspace:*"
+    "@saas/shared": "workspace:*",
+    "@saas/auth": "workspace:*",
+    "@saas/core": "workspace:*",
+    "@saas/db": "workspace:*"
   },
   "devDependencies": {
     "nitropack": "^2.13.6",
