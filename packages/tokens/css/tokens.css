@@ -1,0 +1,86 @@
+/* Generated from @saas/tokens/src/index.ts. Run pnpm --filter @saas/tokens build. */
+/* Plain CSS: no framework, Tailwind directives, or global element styles. */
+:root {
+  --background: 0 0% 100%;
+  --background-hsl: var(--background);
+  --foreground: 240 10% 3.9%;
+  --foreground-hsl: var(--foreground);
+  --card: 0 0% 100%;
+  --card-hsl: var(--card);
+  --card-foreground: 240 10% 3.9%;
+  --card-foreground-hsl: var(--card-foreground);
+  --popover: 0 0% 100%;
+  --popover-hsl: var(--popover);
+  --popover-foreground: 240 10% 3.9%;
+  --popover-foreground-hsl: var(--popover-foreground);
+  --primary: 240 5.9% 10%;
+  --primary-hsl: var(--primary);
+  --primary-foreground: 0 0% 98%;
+  --primary-foreground-hsl: var(--primary-foreground);
+  --secondary: 240 4.8% 95.9%;
+  --secondary-hsl: var(--secondary);
+  --secondary-foreground: 240 5.9% 10%;
+  --secondary-foreground-hsl: var(--secondary-foreground);
+  --muted: 240 4.8% 95.9%;
+  --muted-hsl: var(--muted);
+  --muted-foreground: 240 3.8% 46.1%;
+  --muted-foreground-hsl: var(--muted-foreground);
+  --accent: 240 4.8% 95.9%;
+  --accent-hsl: var(--accent);
+  --accent-foreground: 240 5.9% 10%;
+  --accent-foreground-hsl: var(--accent-foreground);
+  --destructive: 0 84.2% 60.2%;
+  --destructive-hsl: var(--destructive);
+  --destructive-foreground: 0 0% 98%;
+  --destructive-foreground-hsl: var(--destructive-foreground);
+  --border: 240 5.9% 90%;
+  --border-hsl: var(--border);
+  --input: 240 5.9% 90%;
+  --input-hsl: var(--input);
+  --ring: 240 5.9% 10%;
+  --ring-hsl: var(--ring);
+  --radius: 0.5rem;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --background-hsl: var(--background);
+  --foreground: 0 0% 98%;
+  --foreground-hsl: var(--foreground);
+  --card: 240 10% 3.9%;
+  --card-hsl: var(--card);
+  --card-foreground: 0 0% 98%;
+  --card-foreground-hsl: var(--card-foreground);
+  --popover: 240 10% 3.9%;
+  --popover-hsl: var(--popover);
+  --popover-foreground: 0 0% 98%;
+  --popover-foreground-hsl: var(--popover-foreground);
+  --primary: 0 0% 98%;
+  --primary-hsl: var(--primary);
+  --primary-foreground: 240 5.9% 10%;
+  --primary-foreground-hsl: var(--primary-foreground);
+  --secondary: 240 3.7% 15.9%;
+  --secondary-hsl: var(--secondary);
+  --secondary-foreground: 0 0% 98%;
+  --secondary-foreground-hsl: var(--secondary-foreground);
+  --muted: 240 3.7% 15.9%;
+  --muted-hsl: var(--muted);
+  --muted-foreground: 240 5% 64.9%;
+  --muted-foreground-hsl: var(--muted-foreground);
+  --accent: 240 3.7% 15.9%;
+  --accent-hsl: var(--accent);
+  --accent-foreground: 0 0% 98%;
+  --accent-foreground-hsl: var(--accent-foreground);
+  --destructive: 0 62.8% 30.6%;
+  --destructive-hsl: var(--destructive);
+  --destructive-foreground: 0 0% 98%;
+  --destructive-foreground-hsl: var(--destructive-foreground);
+  --border: 240 3.7% 15.9%;
+  --border-hsl: var(--border);
+  --input: 240 3.7% 15.9%;
+  --input-hsl: var(--input);
+  --ring: 240 4.9% 83.9%;
+  --ring-hsl: var(--ring);
+}

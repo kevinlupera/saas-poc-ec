@@ -1,0 +1,16 @@
+{
+  "name": "@saas/tokens",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./css": "./css/tokens.css",
+    "./css/tokens.css": "./css/tokens.css"
+  },
+  "description": "Design tokens (colors, typography, radii, email/PDF exports) and CSS variables. Framework-agnostic.",
+  "scripts": {
+    "build": "node scripts/build-css.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
