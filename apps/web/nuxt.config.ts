@@ -1,9 +1,21 @@
+import { themeInitScript } from './scripts/theme-init'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   // Shared UI layer (packages/ui).
   extends: ['@saas/ui'],
   devtools: { enabled: true },
+  app: {
+    head: {
+      script: [{
+        key: 'theme-init',
+        tagPosition: 'head',
+        tagPriority: 'critical',
+        innerHTML: themeInitScript,
+      }],
+    },
+  },
   build: { transpile: ['@saas/shared'] },
   runtimeConfig: {
     public: {

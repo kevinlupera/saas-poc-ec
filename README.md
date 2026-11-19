@@ -9,7 +9,8 @@ apps/
   mcp/       Nitro → MCP server (POST /mcp).                            :3002
 packages/
   shared/    TypeScript + zod. Shared contract (api, web, mcp). No frameworks.
-  ui/        Nuxt layer: components, composables and theme. Nuxt apps only.
+  tokens/    Plain TypeScript + CSS. Design tokens for web, emails and PDFs. No frameworks.
+  ui/        Nuxt layer: components, composables and Tailwind adapter. Consumes tokens.
 ```
 
 ## Rules
@@ -19,8 +20,9 @@ packages/
 3. **`packages/ui` is for Nuxt apps only.** It may import `shared`; `shared` never imports `ui`.
 4. **Don't pass generics to API calls** (`useApi<T>(...)`): they override automatic inference.
 5. **`apps/web` never depends on `core`, `db` or `drizzle-orm`**: the browser never touches the database.
+6. **`packages/tokens` is framework-agnostic.** No Vue, Nuxt, Nitro or UI-layer dependencies. Tailwind directives and global element styles belong to `packages/ui`, not the token CSS.
 
-Rules 2, 3 and 5 are enforced by `pnpm check:boundaries` (also run by `pnpm check`): it checks each package's declared dependencies and rejects relative imports that leave the package folder. The rules live in `scripts/check-boundaries.mjs`.
+Rules 2, 3, 5 and 6 are enforced by `pnpm check:boundaries` (also run by `pnpm check`): it checks each package's declared dependencies and rejects relative imports that leave the package folder. The rules live in `scripts/check-boundaries.mjs`.
 
 ## Requirements and commands
 
@@ -31,10 +33,31 @@ pnpm dev             # api + web + mcp in parallel
 pnpm dev:api         # or just one: dev:api | dev:web | dev:mcp
 pnpm mcp:inspect     # MCP Inspector UI → Streamable HTTP, http://localhost:3002/mcp
                      # (if NITRO_MCP_TOKEN is set, add `Authorization: Bearer <token>` in its auth field)
-pnpm typecheck       # all three apps
-pnpm check           # check:boundaries + typecheck (use in CI)
+pnpm typecheck       # apps and packages with a typecheck script
+pnpm check           # check:boundaries + check:tokens + typecheck (use in CI)
 pnpm build
 ```
+
+## Design tokens
+
+Import tokens directly without loading the Nuxt layer:
+
+```ts
+import { lightTokens, darkTokens, emailTokens, pdfTokens } from '@saas/tokens'
+```
+
+For any browser app, import `@saas/tokens/css` (or `@saas/tokens/css/tokens.css`
+for older CSS resolvers such as Tailwind 3's PostCSS pipeline) to load plain CSS custom properties
+(`:root` for light, `.dark` for dark). Colors are HSL channels, e.g.
+`color: hsl(var(--foreground))`. This CSS contains no Tailwind directives or global
+body/reset styles. Nuxt apps extending `@saas/ui` load it automatically through the
+layer's Tailwind adapter. `@saas/ui/tokens` remains a compatibility re-export; new
+consumers should declare a dependency on `@saas/tokens` instead.
+
+Edit `packages/tokens/src/index.ts`, then run `pnpm --filter @saas/tokens build`
+to regenerate the committed CSS. `pnpm check:tokens` (also included in `pnpm check`)
+checks that CSS and TypeScript stay in sync and that email/PDF exports contain
+static values. `@saas/tokens` has its own framework-free TypeScript check.
 
 ## Automatic types
 

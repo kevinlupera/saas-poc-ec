@@ -8,10 +8,12 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "test:theme": "node --test tests/theme-init.test.mjs"
   },
   "dependencies": {
     "@saas/shared": "workspace:*",
+    "lucide-vue-next": "^1.0.0",
     "nuxt": "^4.6.4",
     "vue": "^3.5.45",
     "vue-router": "^5.4.0",

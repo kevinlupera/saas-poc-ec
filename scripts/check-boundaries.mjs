@@ -21,6 +21,11 @@ const rules = {
   'apps/web': ['@saas/core', '@saas/db', 'drizzle-orm'],
   // Shared contract: plain TypeScript, no frameworks, no higher layers.
   'packages/shared': ['@saas/core', '@saas/db', '@saas/ui', 'vue', 'nuxt', 'nitropack', 'drizzle-orm'],
+  // Design tokens: plain TypeScript/CSS, no frameworks, no UI or Tailwind layers.
+  'packages/tokens': [
+    '@saas/core', '@saas/db', '@saas/ui', 'vue', 'nuxt', 'nitropack', 'drizzle-orm',
+    '@nuxt/kit', '@nuxtjs/tailwindcss', 'tailwindcss', 'tailwindcss-animate',
+  ],
   // UI only knows the shared contract, never the database or use cases.
   'packages/ui': ['@saas/core', '@saas/db', 'drizzle-orm'],
 }

@@ -4,6 +4,10 @@
   "type": "module",
   "description": "Nuxt layer: shared components, composables and theme. Nuxt apps only.",
   "main": "./nuxt.config.ts",
+  "exports": {
+    ".": "./nuxt.config.ts",
+    "./tokens": "./app/tokens/index.ts"
+  },
   "scripts": {
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck"
@@ -12,6 +16,7 @@
     "nuxt": "^4.6.4"
   },
   "dependencies": {
+    "@saas/tokens": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-vue-next": "^1.0.0",

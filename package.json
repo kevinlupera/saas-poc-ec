@@ -9,7 +9,8 @@
     "build": "pnpm -r run build",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "typecheck": "pnpm --filter @saas/api --filter @saas/mcp run types && pnpm -r run typecheck",
-    "check": "pnpm check:boundaries && pnpm typecheck",
+    "check:tokens": "pnpm --filter @saas/tokens test",
+    "check": "pnpm check:boundaries && pnpm check:tokens && pnpm typecheck",
     "mcp:inspect": "pnpm dlx @modelcontextprotocol/inspector@2.13.0"
   },
   "packageManager": "pnpm@11.28.12",
