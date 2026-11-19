@@ -11,3 +11,4 @@ node_modules
 .atl
 .codegraph
 bun.lock
+.pnpm-store
