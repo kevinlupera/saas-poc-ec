@@ -151,11 +151,10 @@ const isAnnual = ref(false)
           <!-- Plan Action CTA -->
           <Button
             :variant="plan.popular ? 'default' : 'outline'"
-            as="a"
-            href="#registro"
+            as-child
             class="w-full font-semibold shadow-sm"
           >
-            {{ plan.ctaText }}
+            <NuxtLink to="/registro">{{ plan.ctaText }}</NuxtLink>
           </Button>
         </Card>
       </div>

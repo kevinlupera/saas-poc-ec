@@ -66,12 +66,14 @@ const navLinks = [
           <Moon v-else class="h-4 w-4 text-slate-700" />
         </button>
 
-        <Button variant="ghost" size="sm" as="a" href="#login">
-          Iniciar sesión
+        <Button variant="ghost" size="sm" as-child>
+          <NuxtLink to="/login">Iniciar sesión</NuxtLink>
         </Button>
-        <Button variant="default" size="sm" as="a" href="#registro" class="gap-1.5 shadow-sm">
-          <Sparkles class="h-3.5 w-3.5" />
-          Empezar gratis
+        <Button variant="default" size="sm" as-child class="gap-1.5 shadow-sm">
+          <NuxtLink to="/registro">
+            <Sparkles class="h-3.5 w-3.5" />
+            Empezar gratis
+          </NuxtLink>
         </Button>
       </div>
 
@@ -117,12 +119,14 @@ const navLinks = [
         </a>
       </nav>
       <div class="pt-4 border-t border-border flex flex-col gap-2">
-        <Button variant="outline" class="w-full justify-center" as="a" href="#login">
-          Iniciar sesión
+        <Button variant="outline" class="w-full justify-center" as-child>
+          <NuxtLink to="/login" @click="isMobileMenuOpen = false">Iniciar sesión</NuxtLink>
         </Button>
-        <Button variant="default" class="w-full justify-center gap-2" as="a" href="#registro">
-          <Sparkles class="h-4 w-4" />
-          Empezar gratis sin tarjeta
+        <Button variant="default" class="w-full justify-center gap-2" as-child>
+          <NuxtLink to="/registro" @click="isMobileMenuOpen = false">
+            <Sparkles class="h-4 w-4" />
+            Empezar gratis sin tarjeta
+          </NuxtLink>
         </Button>
       </div>
     </div>

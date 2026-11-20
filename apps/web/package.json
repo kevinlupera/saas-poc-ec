@@ -9,17 +9,22 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
-    "test:theme": "node --test tests/theme-init.test.mjs"
+    "test:theme": "node --test tests/theme-init.test.mjs",
+    "test:auth": "node --test tests/auth-client.test.mjs",
+    "test:e2e": "pnpm build && playwright test",
+    "test:e2e:built": "playwright test"
   },
   "dependencies": {
     "@saas/shared": "workspace:*",
+    "@saas/ui": "workspace:*",
+    "better-auth": "1.7.26",
     "lucide-vue-next": "^1.0.0",
     "nuxt": "^4.6.4",
     "vue": "^3.5.45",
-    "vue-router": "^5.4.0",
-    "@saas/ui": "workspace:*"
+    "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "typescript": "^6.0.3",
     "vue-tsc": "^3.3.14"
   }

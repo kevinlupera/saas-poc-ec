@@ -8,6 +8,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   app: {
     head: {
+      meta: [{ name: 'referrer', content: 'no-referrer' }],
       script: [{
         key: 'theme-init',
         tagPosition: 'head',
@@ -17,6 +18,11 @@ export default defineNuxtConfig({
     },
   },
   build: { transpile: ['@saas/shared'] },
+  nitro: {
+    prerender: {
+      routes: ['/login', '/registro', '/recuperar-contrasena', '/restablecer-contrasena', '/verificar-email', '/auth/complete'],
+    },
+  },
   runtimeConfig: {
     public: {
       // Override with NUXT_PUBLIC_API_BASE.

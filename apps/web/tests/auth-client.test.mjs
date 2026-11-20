@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { readFileSync } from 'node:fs'
+import { createWebAuthClient } from '../app/utils/auth-client.ts'
+import { AUTH_ROUTES, authCallback, authErrorMessage, emailError, passwordError } from '../app/utils/auth.ts'
+
+for (const base of ['http://localhost:3001', 'https://identity.example.test', 'https://identity.example.test/api/auth/']) {
+  test(`client uses configured API and cookies: ${base}`, async (t) => {
+    const requests = []
+    t.mock.method(globalThis, 'fetch', async (url, options) => {
+      requests.push({ url: String(url), options })
+      return Response.json(null)
+    })
+    const client = createWebAuthClient(base)
+    assert.equal(requests.length, 0, 'creating a client must not request a session')
+    await client.getSession()
+    assert.equal(requests[0].url, `${new URL(base).origin}/api/auth/get-session`)
+    assert.equal(requests[0].options.credentials, 'include')
+  })
+}
+
+test('client plugin is browser-only and never resolves sessions at import', () => {
+  const plugin = readFileSync(new URL('../app/plugins/auth.client.ts', import.meta.url), 'utf8')
+  assert.match(plugin, /useRuntimeConfig\(\)\.public\.apiBase/)
+  assert.doesNotMatch(plugin, /getSession|useSession|better-auth\/(?:api|adapters)/)
+})
+
+test('errors are safe, do not echo backend text, and verification uses an explicit code', () => {
+  const internal = { status: 403, message: '<script>secret</script>' }
+  assert.equal(authErrorMessage(internal), authErrorMessage())
+  assert.notEqual(authErrorMessage({ code: 'EMAIL_NOT_VERIFIED', status: 403 }), authErrorMessage(internal))
+  for (const code of ['INVALID_EMAIL_OR_PASSWORD', 'INVALID_PASSWORD', 'USER_NOT_FOUND']) {
+    assert.equal(authErrorMessage({ code }), authErrorMessage({ code: 'INVALID_EMAIL_OR_PASSWORD' }))
+  }
+  assert.match(authErrorMessage({ status: 429 }), /Demasiados intentos/)
+  assert.match(authErrorMessage({ code: 'TOKEN_EXPIRED' }), /enlace/)
+})
+
+test('identity utilities do not persist or log credentials and tokens', () => {
+  for (const path of ['../app/utils/auth.ts', '../app/utils/auth-client.ts', '../app/plugins/auth.client.ts']) {
+    const source = readFileSync(new URL(path, import.meta.url), 'utf8')
+    assert.doesNotMatch(source, /localStorage|sessionStorage|console\.(log|warn|error)|document\.cookie/)
+  }
+})
+
+test('return URLs use only fixed application paths', () => {
+  for (const next of ['https://outside.example', '//outside.example', '/admin', 'javascript:alert(1)']) {
+    const origin = new URL(`https://web.example.test/login?next=${encodeURIComponent(next)}`).origin
+    assert.equal(authCallback(origin, 'complete'), 'https://web.example.test/auth/complete')
+  }
+  assert.equal(authCallback('https://web.example.test', 'reset'), `https://web.example.test${AUTH_ROUTES.reset}`)
+})
+
+test('email and password validation matches documented default policy', () => {
+  assert.ok(emailError('invalid'))
+  assert.equal(emailError(' person@example.test '), '')
+  assert.ok(passwordError('short'))
+  assert.equal(passwordError('x'.repeat(8)), '')
+  assert.equal(passwordError('x'.repeat(128)), '')
+  assert.ok(passwordError('x'.repeat(129)))
+})

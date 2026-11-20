@@ -31,12 +31,13 @@ import { Sparkles, ArrowRight, MessageCircle } from 'lucide-vue-next'
             <Button
               size="lg"
               variant="secondary"
-              as="a"
-              href="#registro"
-              class="gap-2 font-bold shadow-md hover:bg-secondary/90 text-foreground"
+              as-child
+              class="gap-2 whitespace-normal text-center font-bold shadow-md hover:bg-secondary/90 text-foreground"
             >
-              Crear cuenta gratis sin tarjeta
-              <ArrowRight class="h-4 w-4" />
+              <NuxtLink to="/registro">
+                Crear cuenta gratis sin tarjeta
+                <ArrowRight class="h-4 w-4 shrink-0" />
+              </NuxtLink>
             </Button>
 
             <Button

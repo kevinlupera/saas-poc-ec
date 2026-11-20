@@ -12,3 +12,5 @@ node_modules
 .codegraph
 bun.lock
 .pnpm-store
+playwright-report
+test-results

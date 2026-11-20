@@ -65,12 +65,13 @@ import {
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4 w-full sm:w-auto">
             <Button
               size="lg"
-              as="a"
-              href="#registro"
+              as-child
               class="gap-2 text-base font-semibold shadow-md hover:shadow-lg transition-all"
             >
-              Empezar gratis
-              <ArrowRight class="h-4 w-4" />
+              <NuxtLink to="/registro">
+                Empezar gratis
+                <ArrowRight class="h-4 w-4" />
+              </NuxtLink>
             </Button>
 
             <Button
