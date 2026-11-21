@@ -7,10 +7,15 @@
     "dev:web": "pnpm --filter @saas/web dev",
     "dev:mcp": "pnpm --filter @saas/mcp dev",
     "build": "pnpm -r run build",
+    "test:db": "pnpm --filter @saas/db test:db",
+    "e2e:tenant": "bash scripts/e2e-tenant.sh",
+    "e2e:oauth": "bash scripts/e2e-oauth.sh",
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:api": "node scripts/check-api-contract.mjs",
     "typecheck": "pnpm --filter @saas/api --filter @saas/mcp run types && pnpm -r run typecheck",
+    "check": "pnpm check:boundaries && pnpm check:tokens && pnpm check:api && pnpm typecheck",
     "check:tokens": "pnpm --filter @saas/tokens test",
-    "check": "pnpm check:boundaries && pnpm check:tokens && pnpm typecheck",
+    "test": "pnpm -r --if-present run test && node --test scripts/*.test.mjs",
     "mcp:inspect": "pnpm dlx @modelcontextprotocol/inspector@2.13.0"
   },
   "packageManager": "pnpm@11.28.12",
@@ -18,6 +23,7 @@
     "node": "^22.21.0 || ^24.11.0 || >=26.0.0"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "lefthook": "2.2.2",
+    "typescript": "6.0.3"
   }
 }

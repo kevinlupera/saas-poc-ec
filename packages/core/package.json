@@ -1,0 +1,16 @@
+{
+  "name": "@saas/core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "Hexagonal core: domain, ports and use cases. No framework dependencies.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0"
+  }
+}

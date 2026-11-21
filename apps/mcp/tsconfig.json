@@ -1,5 +1,9 @@
 {
   "extends": "./.nitro/types/tsconfig.json",
+  "compilerOptions": {
+    // workspace packages (@saas/core, @saas/db, ...) ship as .ts source with explicit extensions
+    "allowImportingTsExtensions": true
+  },
   // `include` replaces the base tsconfig's: repeat it and add the apps/api
   // route types so $fetch('/api/...') is typed.
   "include": [

@@ -9,7 +9,9 @@ export default defineNitroConfig({
   runtimeConfig: {
     // apps/api URL (used by the example tool). Override with NITRO_API_BASE.
     apiBase: 'http://localhost:3001',
-    // If set, requires `Authorization: Bearer <token>`. Override with NITRO_MCP_TOKEN.
-    mcpToken: '',
+    // OAuth: tokens are issued by apps/api (Better Auth mcp plugin) and verified against its JWKS.
+    // Override with NITRO_AUTH_ISSUER, NITRO_MCP_RESOURCE.
+    authIssuer: 'http://localhost:3001/api/auth',
+    mcpResource: 'http://localhost:3002/mcp',
   },
 })

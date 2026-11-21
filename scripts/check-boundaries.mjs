@@ -13,12 +13,14 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
-const root = fileURLToPath(new URL('..', import.meta.url))
+// BOUNDARIES_ROOT lets the test suite point the checker at fixture trees.
+const root = process.env.BOUNDARIES_ROOT ?? fileURLToPath(new URL('..', import.meta.url))
 
 /** folder → forbidden dependencies (and why) */
 const rules = {
-  // The browser never touches the database or server-side logic.
-  'apps/web': ['@saas/core', '@saas/db', 'drizzle-orm'],
+  // The browser never touches the database or server-side logic. It may use the Better Auth
+  // *client* (`better-auth/client`, `@better-auth/oauth-provider/client`), never the server package.
+  'apps/web': ['@saas/core', '@saas/db', '@saas/auth', 'drizzle-orm'],
   // Shared contract: plain TypeScript, no frameworks, no higher layers.
   'packages/shared': ['@saas/core', '@saas/db', '@saas/ui', 'vue', 'nuxt', 'nitropack', 'drizzle-orm'],
   // Design tokens: plain TypeScript/CSS, no frameworks, no UI or Tailwind layers.
@@ -26,8 +28,10 @@ const rules = {
     '@saas/core', '@saas/db', '@saas/ui', 'vue', 'nuxt', 'nitropack', 'drizzle-orm',
     '@nuxt/kit', '@nuxtjs/tailwindcss', 'tailwindcss', 'tailwindcss-animate',
   ],
+  // Hexagonal core: domain + ports + use cases. No frameworks, no adapters.
+  'packages/core': ['@saas/db', '@saas/auth', '@saas/ui', 'better-auth', 'drizzle-orm', 'pg', 'nitropack', 'h3', 'vue', 'nuxt'],
   // UI only knows the shared contract, never the database or use cases.
-  'packages/ui': ['@saas/core', '@saas/db', 'drizzle-orm'],
+  'packages/ui': ['@saas/core', '@saas/db', '@saas/auth', 'drizzle-orm', 'better-auth'],
 }
 
 const SKIP_DIRS = new Set(['node_modules', '.nuxt', '.nitro', '.output', '.wrangler', 'dist'])
@@ -68,7 +72,12 @@ for (const [dir, forbidden] of Object.entries(rules)) {
 
   for (const src of sourceFiles(pkgDir)) {
     for (const spec of importsOf(src)) {
-      if (!spec.startsWith('.')) continue
+      if (!spec.startsWith('.')) {
+        // A bare import of a forbidden package is a violation even if package.json does not list it.
+        const hit = forbidden.find((name) => spec === name || spec.startsWith(`${name}/`))
+        if (hit) errors.push(`${relative(root, src)} imports '${spec}' (${dir} must not use ${hit})`)
+        continue
+      }
       const target = resolve(dirname(src), spec)
       if (target !== pkgDir && !target.startsWith(pkgDir + sep)) {
         errors.push(`${relative(root, src)} imports '${spec}', outside ${dir}`)

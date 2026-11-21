@@ -23,6 +23,11 @@ export default defineNuxtConfig({
       routes: ['/login', '/registro', '/recuperar-contrasena', '/restablecer-contrasena', '/verificar-email', '/auth/complete'],
     },
   },
+  // Auth pages depend on the browser URL/session: render client-side only.
+  routeRules: {
+    '/sign-in': { ssr: false },
+    '/consent': { ssr: false },
+  },
   runtimeConfig: {
     public: {
       // Override with NUXT_PUBLIC_API_BASE.

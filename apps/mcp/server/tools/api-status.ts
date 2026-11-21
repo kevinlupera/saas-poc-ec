@@ -1,6 +1,9 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { HEALTH_PATH, HealthResponseSchema } from '@saas/shared'
 
+/** The API endpoint this tool wraps. Checked by `pnpm check:api`. */
+export const route = 'GET /api/health'
+
 /**
  * Example tool (read-only): checks the status of apps/api.
  * Pattern: input/output via zod from @saas/shared, `readOnlyHint` when it changes nothing.
