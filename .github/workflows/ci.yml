@@ -22,6 +22,12 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # Catches the verification emails; the e2e scripts read the links from its API.
+      mailpit:
+        image: axllent/mailpit:v1.33.1
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       DATABASE_URL: postgres://saas:saas@localhost:5433/saas
       APP_DB_PASSWORD: ci_throwaway
@@ -53,4 +59,5 @@ jobs:
           done
           cat api.log
           exit 1
+      - run: pnpm e2e:auth
       - run: pnpm e2e:tenant
