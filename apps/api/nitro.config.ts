@@ -19,5 +19,14 @@ export default defineNitroConfig({
     databaseUrl: 'postgres://saas_app:saas_app@localhost:5433/saas',
     authBaseUrl: 'http://localhost:3001',
     mcpResource: 'http://localhost:3002/mcp',
+    // Email: NITRO_RESEND_API_KEY + NITRO_EMAIL_FROM (required in production). Without a Resend key,
+    // non-production sends over SMTP to Mailpit (NITRO_SMTP_HOST, NITRO_SMTP_PORT).
+    resendApiKey: '',
+    emailFrom: '',
+    smtpHost: 'localhost',
+    smtpPort: 1025,
+    // Google sign-in: NITRO_GOOGLE_CLIENT_ID + NITRO_GOOGLE_CLIENT_SECRET, both or neither (disabled).
+    googleClientId: '',
+    googleClientSecret: '',
   },
 })

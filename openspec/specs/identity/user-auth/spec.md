@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define los flujos de autenticación del frontend para usuarios del negocio mediante email y Google, y su integración con una API externa de identidad sin implementar ese backend.
+Define los flujos de autenticación del frontend para usuarios del negocio mediante email y Google, y su integración con la API de identidad (`identity/auth-api`); el comportamiento del servidor se define en esa capacidad.
 
 ## Requirements
 

@@ -1,6 +1,6 @@
 # Frontend web
 
-Nuxt 4 con generación estática, componentes `@saas/ui` y cliente Vue oficial de Better Auth **1.7.26**. Este paquete implementa la interfaz y el contrato cliente; **no incorpora un backend de autenticación**.
+Nuxt 4 con generación estática, componentes `@saas/ui` y cliente Vue oficial de Better Auth **1.7.26**. Este paquete implementa la interfaz y el contrato cliente; la autenticación la sirve `apps/api` (ver *Backend integration*).
 
 ## Desarrollo y configuración
 
@@ -30,61 +30,61 @@ Para cambiar de ambiente en este sitio **estático**, configurar la variable dur
 
 La landing mantiene sus enlaces públicos. No se excluyen `/terms`, `/privacy` ni `/support` del prerender y no se suprimen errores del crawler para ocultar páginas ausentes. Los borradores **no son documentos legales aprobados**, no solicitan aceptación ni acreditan cumplimiento de la LOPDP.
 
-## Contrato de integración del backend pendiente
+## Backend integration (`apps/api`)
 
-Implementar Better Auth en la API, con una versión compatible con el cliente fijado en el lockfile. No basta con responder objetos propios: los fixtures de tests siguen el protocolo de Better Auth y las pantallas llaman al cliente oficial.
+The API mounts Better Auth 1.7.26 under `/api/auth` (spec `identity/auth-api`). The screens call the official client; these are the operations they use:
 
-| Acción cliente | Operación de API relativa a `/api/auth` |
+| Client action | API operation under `/api/auth` | Status |
+| --- | --- | --- |
+| `signUp.email` | `POST /sign-up/email` | Connected. Returns **no session** until the email is verified |
+| `signIn.email` | `POST /sign-in/email` | Connected. Unverified account → `403 EMAIL_NOT_VERIFIED` and a new verification email |
+| `signIn.social` (Google) | `POST /sign-in/social` | Connected when Google is configured on the API |
+| `getSession` / `useSession` | `GET /get-session` | Connected |
+| `signOut` | `POST /sign-out` | Connected |
+| `sendVerificationEmail` | `POST /send-verification-email` | Connected |
+| Verification link | `GET /verify-email?token=…&callbackURL=…` | Verifies, starts the session, redirects to `/verificar-email` |
+| `requestPasswordReset` / `resetPassword` | `POST /request-password-reset`, `POST /reset-password` | **Not connected yet**: the API sends no reset email |
+
+### Local setup
+
+```bash
+docker compose up -d                  # Postgres :5433 + Mailpit (SMTP :1025, inbox http://localhost:8025)
+DATABASE_URL=postgres://saas:saas@localhost:5433/saas pnpm --filter @saas/db db:migrate
+APP_DB_PASSWORD=saas_app pnpm --filter @saas/db db:app-role
+cp apps/api/.env.example apps/api/.env   # set NITRO_AUTH_SECRET (openssl rand -base64 32)
+pnpm dev:api                          # http://localhost:3001
+NUXT_PUBLIC_API_BASE=http://localhost:3001 pnpm dev:web
+```
+
+Register on `/registro`, open the email in Mailpit (`http://localhost:8025`) and click the link: the API verifies the email, sets the session cookie and returns you to `/verificar-email`; `/auth/complete` then shows the session. Accounts created before verification was required are unverified: signing in sends them a new link.
+
+### Email delivery (API env, server only)
+
+| Variable | Use |
 | --- | --- |
-| `signIn.email` | `POST /sign-in/email` |
-| `signUp.email` | `POST /sign-up/email` |
-| `signIn.social` | `POST /sign-in/social` |
-| `getSession` / `useSession` | `GET /get-session` y refresh cuando lo requiera el protocolo |
-| `signOut` | `POST /sign-out` |
-| `requestPasswordReset` | `POST /request-password-reset` |
-| `resetPassword` | `POST /reset-password` |
-| `sendVerificationEmail` | `POST /send-verification-email` |
-| Enlace de verificación procesado por la API | `GET /verify-email` con token y callback |
+| `NITRO_RESEND_API_KEY`, `NITRO_EMAIL_FROM` | Resend. **Required in production**: the API refuses to start without both. Setting the key in any environment selects Resend |
+| `NITRO_SMTP_HOST`, `NITRO_SMTP_PORT` | Non-production without a Resend key: plain SMTP, no TLS/auth. Defaults `localhost:1025` (Mailpit). Sender defaults to `no-reply@localhost` |
 
-### Credenciales y sesión
+Delivery is not awaited by the request (the response time must not reveal accounts); failures are logged without the link or token, and `/verificar-email` offers a resend.
 
-- Habilitar email/contraseña en el backend. La validación de nuevas contraseñas usa los valores por defecto de Better Auth: **8 a 128 caracteres**; alinear la política de servidor. No recortar contraseñas y no enviar la confirmación a la API. El login no aplica una longitud mínima a contraseñas existentes.
-- Recomendado: exigir verificación para acceso por credenciales y configurar envío inicial de verificación. El registro tolera una respuesta aceptada sin sesión (incluidas respuestas sintéticas para no enumeración); en ese caso lleva a verificación. Una aceptación no garantiza cuenta nueva ni entrega de email.
-- La identidad visible proviene de la sesión de la API. Se distinguen carga, sesión confirmada, respuesta válida sin sesión y fallo de consulta. Login y Google no muestran acceso confirmado sin resolver sesión.
-- La sesión se consulta solo en navegador: no hay cookies de usuarios en HTML generado ni solicitudes de sesión durante prerender. Better Auth mantiene la fuente de verdad reactiva; no se persisten contraseñas o tokens en `localStorage`, `sessionStorage` ni cookies legibles por JavaScript. La preferencia de tema sí puede usar almacenamiento local.
-- Un cierre fallido no se trata como invalidación confirmada. La autorización real siempre corresponde al backend; no hay middleware global de panel ni permisos de negocio en este corte.
-- Emitir cookies HttpOnly con atributos adecuados al ambiente y conservar las protecciones CSRF/origen de Better Auth. La UI no sustituye rate limiting, validación de tokens, expiración, no enumeración ni controles de acceso.
+### Google (API env, server only)
 
-### Orígenes, CORS y cookies
+1. Create an OAuth client (web application) in Google Cloud. Authorized redirect URI: **the API callback** `http://localhost:3001/api/auth/callback/google` (and the production API URL). It is not a web URL.
+2. Set `NITRO_GOOGLE_CLIENT_ID` and `NITRO_GOOGLE_CLIENT_SECRET` on the API, both or neither (empty = Google disabled; only one fails startup). Never put them in `runtimeConfig.public` or the web bundle.
+3. Web returns are fixed by this frontend: success `/auth/complete`, error or cancel `/login?error=oauth`.
 
-- API local: `http://localhost:3001`; web local: `http://localhost:3000`.
-- Añadir el origen web a `trustedOrigins` y permitir solo callbacks válidos.
-- CORS debe permitir el origen web explícito, credenciales, métodos y headers que envía el cliente. No usar `Access-Control-Allow-Origin: *` con cookies. El middleware existente es una base, no una validación de toda la integración.
-- Producción requiere HTTPS. Preferir web/API bajo el mismo sitio; si se despliegan en sitios distintos, revisar `SameSite=None; Secure`, bloqueo de cookies de terceros y viabilidad real en los navegadores soportados.
-- Este frontend usa destinos de retorno propios y fijos; ignora parámetros libres `next` o `redirect`. El backend debe validar igualmente los destinos y el origen de las solicitudes.
+Linking rule: Google signs into an existing email/password account with the same email **only if that account's email is verified**. An unverified account is never linked (whoever pre-registered an address cannot share the real owner's account) and the user lands on `/login?error=oauth`; once the email is verified, Google signs into that same account.
 
-### Google
+### Origins, CORS and cookies
 
-Responsabilidades del backend/proveedor, **pendientes de implementar/configurar**:
+- `NITRO_WEB_ORIGIN` is the only CORS origin with credentials and the only trusted origin for callbacks; other callback URLs and foreign `Origin` requests carrying cookies are rejected.
+- Locally web (`:3000`) and API (`:3001`) are the same site, so Better Auth's HttpOnly `SameSite=Lax` cookies work. Production requires HTTPS; cross-site deployments (`SameSite=None; Secure`, third-party cookie blocking) are **not set up** yet.
+- The frontend uses its own fixed return destinations and ignores free `next`/`redirect` parameters.
+- The session is only read in the browser; no passwords or tokens are stored in `localStorage`, `sessionStorage` or JavaScript-readable cookies. The UI does not replace backend authorization.
 
-1. Habilitar Google como proveedor social de Better Auth en la API y crear el cliente OAuth correspondiente en Google Cloud.
-2. Mantener `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y el secreto de Better Auth en configuración **exclusiva del servidor**, nunca en `runtimeConfig.public` ni en el bundle web.
-3. Configurar la base pública de Better Auth con la URL real de la API. Registrar en Google el callback exacto de **la API**, localmente:
-   `http://localhost:3001/api/auth/callback/google`.
-4. Permitir el origen y callbacks de la web. Tras el intercambio con Google, el retorno exitoso de la aplicación es `/auth/complete`; el retorno de error es `/login?error=oauth`. **No confundir este retorno web con el callback OAuth de la API**.
-5. El backend gestiona código OAuth, `state`, tokens del proveedor, cuenta vinculada y creación de identidad. No se añade un SDK de Google al formulario.
+### Contract check
 
-Las dos pantallas usan el mismo flujo `signIn.social({ provider: 'google', ... })`. El cliente oficial sigue la redirección devuelta por la API. Un error al iniciarlo o un retorno de cancelación permite reintentar o usar email. El estado autenticado se obtiene después consultando la sesión.
-
-### Enlaces de email
-
-- Configurar en el servidor `emailVerification.sendVerificationEmail` y `emailAndPassword.sendResetPassword`, junto con envío inicial/reenvío, proveedores y las políticas de entrega, rate limiting y no enumeración.
-- Recuperación: la solicitud fija `redirectTo` al origen web + `/restablecer-contrasena`. El enlace que emite Better Auth pasa por la API y finalmente lleva a la web con `token=...`, o con un indicador de token inválido/vencido.
-- El formulario captura el token solo en memoria y lo retira de la URL mediante reemplazo de historial. No lo registra ni lo guarda en storage. Tras éxito o rechazo por token inválido/vencido, lo descarta. Recargar después de retirarlo exige abrir el enlace de nuevo o solicitar otro.
-- Un reset aceptado muestra confirmación y ofrece login; **no presupone sesión iniciada**.
-- Verificación: el enlace original se procesa en la API mediante `/verify-email` y redirige a `/verificar-email` en la web. `verified=true` o un indicador similar en la URL no prueba verificación; solo una sesión de la API puede confirmar el estado de su email.
-- Recuperación y reenvío muestran confirmación genérica de solicitud aceptada, no confirmación de entrega. Una API ausente produce error recuperable, nunca un éxito simulado. El backend debe aplicar la no enumeración real.
-- La web aplica `Referrer-Policy` mediante meta `no-referrer` y no carga analíticas ni scripts de terceros en estas pantallas. No incorporar tokens a logs, capturas de pruebas reales o herramientas de medición.
+`pnpm e2e:auth` (API + Postgres + Mailpit running) exercises the API contract over HTTP: sign-up without session, the verification link read from the Mailpit API, verified session, sign-in, identical errors for wrong password and unknown email, sign-out, foreign origin/callback rejection and Google start. Set `EXPECT_GOOGLE=1` to require Google to be configured.
 
 ## Pruebas
 
@@ -122,10 +122,10 @@ Publicar `apps/web/.output/public`. Se generan las rutas base de autenticación 
 ## Checklist real pendiente antes del lanzamiento
 
 - [ ] API Better Auth operativa y compatible, validación de contraseñas y no enumeración/rate limiting comprobados.
-- [ ] Login y registro reales (sesión inmediata y verificación requerida), consulta/expiración y cierre de sesión comprobados.
+- [ ] Login y registro reales desde el origen público (verificación requerida), consulta/expiración y cierre de sesión comprobados. Local: cubierto por `pnpm e2e:auth`.
 - [ ] CORS, trustedOrigins, cookies HttpOnly/SameSite/Secure y CSRF probados desde el origen público definitivo.
-- [ ] Google real: registro, login, cancelación, retorno y sesión; sin secretos públicos.
-- [ ] Correos reales: verificación inicial/reenvío y recuperación; enlaces válidos, vencidos y reutilizados.
+- [ ] Google real con el cliente OAuth definitivo: cuenta nueva, login de vuelta, cancelación → `/login?error=oauth`, email de una cuenta con contraseña sin verificar (rechazado) y verificada (misma cuenta), sesión en `/auth/complete`; sin secretos públicos.
+- [ ] Correos reales con Resend (dominio remitente verificado, `NITRO_RESEND_API_KEY` y `NITRO_EMAIL_FROM` en producción): verificación inicial, reenvío y al iniciar sesión sin verificar; enlaces válidos, vencidos y reutilizados; entrega confirmada desde Lambda. Recuperación de contraseña pendiente de backend.
 - [ ] Hosting estático: acceso directo/recarga a todas las rutas y enlaces con query.
 - [ ] Reemplazar borradores de `/terms` y `/privacy` por documentos aprobados; definir canales reales de soporte y revisar el resto del contenido comercial de la landing antes de publicación.
 
@@ -141,6 +141,18 @@ Esta checklist corresponde a la integración y preparación externa del lanzamie
 - Regresión de verificación corregida y probada: los enlaces inválidos/vencidos mantienen el aviso y permiten reenviar incluso con una sesión cuyo email ya está verificado. El retorno válido sin error sigue mostrando la verificación confirmada por la API.
 - Comprobación visual adicional: landing → validación de login → registro en 320 px y tema oscuro, sin errores de ejecución del navegador. Se comprobó contraste de campos y texto tras resolver el tema.
 - Revisión de output público: sin fixtures de identidad, credenciales de Google ni mocks de tests; sin cambios de implementación en `apps/api`.
-- La API local responde 404 a `/api/auth/get-session`; esto no impide generar el sitio y confirma que todavía no existe integración de autenticación real.
+- La API local respondía 404 a `/api/auth/get-session` en esa fecha (superado: ver *Backend integration* y la verificación de `connect-auth-backend`).
 - Advertencia no bloqueante del build: Nuxt informa que `tailwindcss/nesting` no se puede cargar. El build y las pruebas pasan; no se ha cambiado la configuración de PostCSS fuera del alcance de este trabajo.
 - `openspec validate frontend-auth --strict`: correcto antes del archivo. Specs principales sincronizadas y validadas; cambio archivado en `openspec/changes/archive/2026-11-20-frontend-auth/`.
+
+## Verification: `connect-auth-backend` (2026-11-24)
+
+- `pnpm check` and `pnpm test`: pass (includes `parseConfig` email/Google rules, Resend sender, verification link).
+- `pnpm e2e:auth`: 25/25 against API + Postgres + Mailpit, with Google configured (authorization URL, `redirect_uri` = API callback) and without it (client error, no redirect).
+- `pnpm e2e:tenant` 11/11 and `pnpm e2e:oauth` (MCP 200 with token, 401 without, `tenant_id` = org) after moving them to verified sign-up.
+- `pnpm --filter @saas/web test:e2e:built`: 43/43, including the real cancel return `/login?error=oauth&error=access_denied` (repeated `error` parameter; it previously hid the message).
+- Manual browser check (web :3010, API :3011, local ports clashed with other projects), real Google OAuth client:
+  - Email sign-up → `/verificar-email` → link from Mailpit → signed in; sign-out; sign-in with email: OK.
+  - Google sign-in with a new account → `/auth/complete` with the Google identity: OK.
+  - Google cancel → `/login?error=oauth&error=access_denied` with the retry message, no session: OK.
+  - **Passed:** Google with the email of an already verified password account: lands on `/auth/complete` with the name given at registration (same account), and the user now has both `credential` and `google` accounts, no `/login?error=oauth`.

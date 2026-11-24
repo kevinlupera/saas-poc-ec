@@ -20,9 +20,11 @@
     "@better-auth/mcp": "1.7.27",
     "@saas/core": "workspace:*",
     "@saas/db": "workspace:*",
-    "better-auth": "1.7.27"
+    "better-auth": "1.7.27",
+    "nodemailer": "10.6.1"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0"
+    "@types/node": "^24.0.0",
+    "@types/nodemailer": "8.0.2"
   }
 }
