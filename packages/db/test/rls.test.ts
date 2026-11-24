@@ -3,10 +3,31 @@
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { sql } from 'drizzle-orm'
-import { getTableName, is } from 'drizzle-orm'
-import { PgTable } from 'drizzle-orm/pg-core'
 import pg from 'pg'
-import { createDb, schema, tenantRlsSql, withTenant } from '../src/index.ts'
+import { createDb, tenantRlsSql, withTenant } from '../src/index.ts'
+
+const AUTH_TABLES = new Set([
+  'account',
+  'agent',
+  'agent_capability_grant',
+  'agent_host',
+  'apikey',
+  'approval_request',
+  'invitation',
+  'jwks',
+  'member',
+  'oauth_access_token',
+  'oauth_client',
+  'oauth_client_assertion',
+  'oauth_client_resource',
+  'oauth_consent',
+  'oauth_refresh_token',
+  'oauth_resource',
+  'organization',
+  'session',
+  'user',
+  'verification',
+])
 
 const OWNER_URL = process.env.DATABASE_URL ?? 'postgres://saas:saas@localhost:5433/saas'
 const APP_URL = process.env.APP_DATABASE_URL ?? 'postgres://saas_app:saas_app@localhost:5433/saas'
@@ -91,20 +112,18 @@ test('withTenant rejects an empty tenant', async () => {
 })
 
 test('every business table has tenant_id and forced RLS', async () => {
-  const authTables = new Set(Object.values(schema).filter((t) => is(t, PgTable)).map((t) => getTableName(t)))
   const { rows } = await owner.query(`
     select c.relname as name, c.relforcerowsecurity as forced,
            exists (select 1 from information_schema.columns
                    where table_schema = 'public' and table_name = c.relname and column_name = 'tenant_id') as has_tenant_id
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'`)
-  const business = rows.filter((r) => !authTables.has(r.name) && r.name !== 'rls_probe')
+  const business = rows.filter((r) => !AUTH_TABLES.has(r.name) && r.name !== 'rls_probe')
   const bad = business.filter((r) => !r.has_tenant_id || !r.forced).map((r) => r.name)
   assert.deepEqual(bad, [], `business tables missing tenant_id or FORCE RLS: ${bad.join(', ')}`)
 })
 
 test('every business table has the current tenant_isolation policy (not one from an older helper)', async () => {
-  const authTables = new Set(Object.values(schema).filter((t) => is(t, PgTable)).map((t) => getTableName(t)))
   const { rows } = await owner.query(
     "select tablename, qual, with_check from pg_policies where schemaname = 'public' and policyname = 'tenant_isolation'",
   )
@@ -112,7 +131,7 @@ test('every business table has the current tenant_isolation policy (not one from
   const { rows: tables } = await owner.query("select tablename from pg_tables where schemaname = 'public'")
   const stale = tables
     .map((t) => t.tablename as string)
-    .filter((name) => !authTables.has(name) && name !== 'rls_probe')
+    .filter((name) => !AUTH_TABLES.has(name) && name !== 'rls_probe')
     .filter((name) => !/NULLIF/.test(byTable.get(name)?.qual ?? '') || !/NULLIF/.test(byTable.get(name)?.with_check ?? ''))
   assert.deepEqual(stale, [], `outdated or missing tenant_isolation policy; re-run tenantRlsSql in a new migration: ${stale.join(', ')}`)
 })

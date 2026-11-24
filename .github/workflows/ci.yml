@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: saas
+          POSTGRES_PASSWORD: saas
+          POSTGRES_DB: saas
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U saas -d saas"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://saas:saas@localhost:5433/saas
+      APP_DB_PASSWORD: ci_throwaway
+      APP_DATABASE_URL: postgres://saas_app:ci_throwaway@localhost:5433/saas
+      NITRO_DATABASE_URL: postgres://saas_app:ci_throwaway@localhost:5433/saas
+      NITRO_AUTH_SECRET: ci-throwaway-auth-secret-32chars
+      NITRO_AUTH_BASE_URL: http://localhost:3001
+      NITRO_WEB_ORIGIN: http://localhost:3000
+      NITRO_MCP_RESOURCE: http://localhost:3002/mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm --filter @saas/db db:migrate
+      - run: pnpm --filter @saas/db db:app-role
+      - run: pnpm test:db
+      - name: Start the API as saas_app
+        run: |
+          pnpm --filter @saas/api dev > api.log 2>&1 &
+          for _ in $(seq 1 40); do
+            curl -sf http://localhost:3001/api/auth/ok && exit 0
+            sleep 2
+          done
+          cat api.log
+          exit 1
+      - run: pnpm e2e:tenant
