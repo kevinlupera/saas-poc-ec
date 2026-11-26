@@ -7,7 +7,7 @@ const base = {
   databaseUrl: 'postgres://u:p@localhost:5433/db',
   authBaseUrl: 'http://localhost:3001',
   webOrigin: 'http://localhost:3000',
-  mcpResource: 'http://localhost:3002/mcp',
+  mcpResource: 'http://localhost:3001/mcp',
   resendApiKey: '',
   emailFrom: '',
   smtpHost: 'localhost',
@@ -60,4 +60,9 @@ test('Google is enabled with both credentials, disabled with neither', () => {
 test('only one Google credential fails, naming the missing key', () => {
   failsWith({ ...base, googleClientId: 'id' }, dev, ['googleClientSecret'])
   failsWith({ ...base, googleClientSecret: 'gsecret' }, dev, ['googleClientId'], 'gsecret')
+})
+
+test('the MCP resource is served by the API itself (same origin)', () => {
+  assert.equal(parseConfig(base, dev).mcpResource, 'http://localhost:3001/mcp')
+  failsWith({ ...base, mcpResource: 'http://localhost:3002/mcp' }, dev, ['mcpResource'])
 })

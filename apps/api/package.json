@@ -11,6 +11,9 @@
     "test": "node --test \"test/**/*.test.ts\""
   },
   "dependencies": {
+    "@better-auth/mcp": "^1.7.27",
+    "@cfworker/json-schema": "^4.1.6",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@saas/auth": "workspace:*",
     "@saas/core": "workspace:*",
     "@saas/db": "workspace:*",

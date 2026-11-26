@@ -2,8 +2,8 @@
 
 ## 1. Dependencies and config
 
-- [ ] 1.1 Add `@modelcontextprotocol/sdk`, `@cfworker/json-schema` and `@better-auth/mcp` (same versions as `apps/mcp`) to `apps/api`; `jose` as devDependency for tests. Verify: `pnpm install` succeeds and `pnpm check:boundaries` passes
-- [ ] 1.2 Write failing tests in `apps/api/test/config.test.ts`: `mcpResource` with an origin different from `authBaseUrl` fails naming `mcpResource` (no values); `http://localhost:3001/mcp` with `authBaseUrl` `http://localhost:3001` passes. Then add the rule in `container.ts` and change the `mcpResource` default in `apps/api/nitro.config.ts`, `apps/api/.env.example`, CI env, `apps/api/test/config.test.ts` and `packages/auth/test/email.test.ts` to `http://localhost:3001/mcp`; set the local gitignored `apps/api/.env` `NITRO_MCP_RESOURCE` to `<NITRO_AUTH_BASE_URL>/mcp`. Verify: `pnpm --filter @saas/api test` passes and `pnpm dev:api` starts
+- [x] 1.1 Add `@modelcontextprotocol/sdk`, `@cfworker/json-schema` and `@better-auth/mcp` (same versions as `apps/mcp`) to `apps/api` (no `jose`: token tests run in `e2e:oauth`). Verify: `pnpm install` succeeds and `pnpm check:boundaries` passes
+- [x] 1.2 Write failing tests in `apps/api/test/config.test.ts`: `mcpResource` with an origin different from `authBaseUrl` fails naming `mcpResource` (no values); `http://localhost:3001/mcp` with `authBaseUrl` `http://localhost:3001` passes. Then add the rule in `container.ts` and change the `mcpResource` default in `apps/api/nitro.config.ts`, `apps/api/.env.example`, CI env, `apps/api/test/config.test.ts` and `packages/auth/test/email.test.ts` to `http://localhost:3001/mcp`; set the local gitignored `apps/api/.env` `NITRO_MCP_RESOURCE` to `<NITRO_AUTH_BASE_URL>/mcp`. Verify: `pnpm --filter @saas/api test` passes and `pnpm dev:api` starts
 
 ## 2. Agent principal from token claims
 
