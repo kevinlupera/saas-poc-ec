@@ -10,8 +10,7 @@ Keep this file current: if you change a rule, a command or an architectural deci
 | `packages/core` | Hexagonal core: domain, ports, use cases. **No framework imports.** |
 | `packages/auth` | Driven adapter: Better Auth config and `IdentityProvider` implementation |
 | `packages/db` | Driven adapter: Drizzle + Postgres (Neon), schema, migrations, `withTenant`, RLS helpers |
-| `apps/api` | Driving adapter (HTTP, Nitro **v2** `nitropack`) and composition root (`server/utils/container.ts`) |
-| `apps/mcp` | Driving adapter (MCP) for third-party agents, protected by OAuth tokens issued by `apps/api` |
+| `apps/api` | Driving adapters (HTTP routes, and MCP for third-party agents at `POST /mcp`, Nitro **v2** `nitropack`) and composition root (`server/utils/container.ts`) |
 | `apps/web`, `packages/ui`, `packages/shared` | Frontend, UI layer, shared zod contract |
 
 Dependency rule: `apps/* -> auth/db -> core`. `core` imports nothing from better-auth, drizzle, pg, nitropack or h3.
@@ -22,12 +21,12 @@ Dependency rule: `apps/* -> auth/db -> core`. `core` imports nothing from better
 ```bash
 pnpm check            # boundaries + API contract + typecheck + lint (run before every commit)
 pnpm lint             # backend: no detached promises (Lambda freezes after the response)
-pnpm test             # unit tests: core, auth, db (pure), api, mcp, scripts (check:api)
+pnpm test             # unit tests: core, auth, db (pure), api (incl. MCP tools), scripts (check:api)
 docker compose up -d  # Postgres (:5433) + Mailpit (SMTP :1025, inbox/API http://localhost:8025)
 pnpm test:db          # RLS / tenant isolation against Postgres (docker compose up -d first)
 pnpm e2e:auth         # sign-up -> Mailpit verification link -> session, sign-in/out, Google start (api + Postgres + Mailpit)
 pnpm e2e:tenant       # tenant isolation over HTTP (api + Postgres + Mailpit running)
-pnpm e2e:oauth        # OAuth authorize -> consent -> token -> /mcp (api + mcp + Postgres + Mailpit running)
+pnpm e2e:oauth        # OAuth authorize -> consent -> token -> /mcp on the API (api + Postgres + Mailpit running)
 # e2e overrides when ports clash: API_BASE (must match NITRO_AUTH_BASE_URL), WEB_ORIGIN, MAILPIT, MCP_RESOURCE
 APP_DB_PASSWORD=saas_app pnpm --filter @saas/db db:app-role   # runtime DB role (after db:migrate)
 ```
@@ -43,18 +42,18 @@ Auth schema changes: `pnpm --filter @saas/auth auth:schema`, then `pnpm --filter
 Every endpoint in `apps/api/server/api` ships with **both**:
 
 1. **OpenAPI docs**: a `defineRouteMeta({ openAPI: { tags, operationId, summary, description, responses, ... } })` in the handler file. Protected routes declare `security`, path params and every status they can return (401/403 included).
-2. **An MCP tool** in `apps/mcp/server/tools/<name>.ts` exporting `export const route = 'METHOD /api/path/{param}'` and registering the tool. Mark read-only tools with `readOnlyHint`; destructive or credential-minting ones need explicit human confirmation.
+2. **An MCP tool** in `apps/api/server/mcp/tools/<name>.ts` exporting `export const route = 'METHOD /api/path/{param}'`, registered in `server/mcp/server.ts`. The route and the tool call the same function in `server/utils/endpoints.ts`. Mark read-only tools with `readOnlyHint`; destructive or credential-minting ones need explicit human confirmation.
 
 `pnpm check:api` fails the build if either is missing (route files must be named `<name>.<get|post|put|patch|delete>.ts` so they can be checked), if an `operationId` repeats, or if a tool points at a route that does not exist.
 The only escape hatch is `scripts/api-contract.exemptions.json`: an entry needs a real `reason`, and it fails once the route gets a tool (stale). Treat exemptions as debt, never as a default.
 
 Nitro notes (we run `nitropack` 2.x; nitro.build docs describe v3):
 - `defineRouteMeta` is auto-imported; `experimental.openAPI` is on. Spec at `/_openapi.json`, UIs at `/_scalar` and `/_swagger` (dev only; protect them before enabling `openAPI.production`).
-- Keep schema literals simple (no `minLength`/`maxLength`/`minItems`): `apps/mcp` and `apps/web` typecheck the API route types and reject them. Put such limits in `description`.
-- Route files must `import` their utils explicitly. Nitro auto-imports of `server/utils` break the typecheck of `apps/mcp`/`apps/web`.
+- Keep schema literals simple (no `minLength`/`maxLength`/`minItems`): `apps/web` typechecks the API route types and rejects them. Put such limits in `description`.
+- Route files must `import` their utils explicitly. Nitro auto-imports of `server/utils` break the typecheck of `apps/web`. Files under `server/mcp` (and anything a unit test imports) use relative imports with the `.ts` extension.
 - Config reaches utils as `unknown` and is validated with zod (`parseConfig`); never log config values.
 
-Open decision: **how tools call the API on behalf of the user.** Forwarding the agent's token to the API is *token passthrough*, which the MCP spec forbids. Until a delegation model is chosen, tools for authenticated endpoints are exempt. Do not ship a tool that forwards the received token.
+MCP delegation model: tools run **in-process** in `apps/api`. `POST /mcp` verifies the bearer token with `requireMcpAuth` (audience `NITRO_MCP_RESOURCE`, which must be `<API origin>/mcp`); the tool context builds an `agent` principal from the claims (`sub`, `tenant_id`) plus the user's **current** role (`mcpPrincipal` in `packages/auth`), then runs the endpoint function, which authorizes like the route. Never forward the received token to anything (token passthrough is forbidden by the MCP spec). Map denials with `guarded(...)` so every one reads the same `Forbidden`.
 
 ## Multi-tenancy (`tenantId` = Better Auth organization id)
 
@@ -63,9 +62,9 @@ Open decision: **how tools call the API on behalf of the user.** Forwarding the 
 - Touch tenant data only through `withTenant(db, tenantId, tx => ...)`. Never query business tables with the bare `db`.
 - RLS is ignored by superusers, `BYPASSRLS` roles and (without FORCE) the owner. The app connects as `saas_app` (`NITRO_DATABASE_URL`); migrations use the owner (`DATABASE_URL`). Never run the app as the owner. On Neon the console owner role bypasses RLS.
 - Policies use `NULLIF(current_setting('app.tenant_id', true), '')`: after a tenant transaction, Postgres returns `''` (not NULL) on that connection. Do not simplify it.
-- Authorization: `authorizeAction(principal, action, tenantId)` from core on every tenant route (`requireAccess` in `apps/api/server/utils/principal.ts`). Wrong tenant and missing permission return the same 403, so tenants are never revealed.
+- Authorization: `authorizeAction(principal, action, tenantId)` from core on every tenant route and tool (`requireAccess` in `apps/api/server/utils/principal.ts`, or inside the shared endpoint function in `server/utils/endpoints.ts` when an MCP tool exposes it). Wrong tenant and missing permission return the same 403, so tenants are never revealed.
 - API keys belong to an organization and carry explicit scopes. Better Auth rejects client-set `permissions`; keys are created server-side (`POST /api/tenants/{tenantId}/api-keys`), and nobody can grant a scope they do not hold. Keys can never hold `apikeys:manage`.
-- MCP access tokens carry `tenant_id`: the consent is tied to the session's active organization (`postLogin.consentReferenceId`) and the claim is only emitted if the user is a member when the token is issued or refreshed. It is not proof of current membership: anything that uses `tenant_id` must still authorize against current membership (`authorizeAction`). There is no tenant picker yet: a user in several tenants authorizes the active one.
+- MCP access tokens carry `tenant_id`: the consent is tied to the session's active organization (`postLogin.consentReferenceId`) and the claim is only emitted if the user is a member when the token is issued or refreshed. It is not proof of current membership: anything that uses `tenant_id` must still authorize against current membership (`mcpPrincipal` re-reads the role on every call, then `authorizeAction`). There is no tenant picker yet: a user in several tenants authorizes the active one.
 - Requests are logged as JSON with `tenantId` (including denied ones). Log the pathname only, never query strings or config.
 
 ## Platform staff and 2FA

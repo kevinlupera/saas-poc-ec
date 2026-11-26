@@ -29,7 +29,7 @@
 ## 6. Remove apps/mcp
 
 - [x] 6.1 Delete `apps/mcp` and remove its references: root `package.json` (`dev:mcp`, `typecheck` filter), `lefthook.yml` globs, `eslint.config.mjs`, `packages/shared/src/index.ts` and `packages/auth/src/auth.ts` comments; regenerate `pnpm-lock.yaml`. Verify: `grep -rn "apps/mcp\|@saas/mcp\|3002" --exclude-dir=node_modules --exclude-dir=archive .` finds only historical openspec changes, and `pnpm check` passes
-- [ ] 6.2 Update AGENTS.md (layout table, API contract tool path, drop the "Open decision", describe the delegation model: principal from claims + current membership, no token forwarding) and README (layout, ports, `mcp:inspect` URL, env table, add-a-tool steps, deploy). Verify: documented commands and URLs run as written
+- [x] 6.2 Update AGENTS.md (layout table, API contract tool path, drop the "Open decision", describe the delegation model: principal from claims + current membership, no token forwarding) and README (layout, ports, `mcp:inspect` URL, env table, add-a-tool steps, deploy). Verify: documented commands and URLs run as written
 
 ## 7. OAuth login parity (web)
 
