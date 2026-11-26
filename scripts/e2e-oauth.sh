@@ -44,6 +44,9 @@ expect "valid token: tools/list" 200 "$(mcp_code -H "authorization: Bearer $AT")
 expect "no token" 401 "$(mcp_code)"
 CHAL=$(curl -s -m 30 -i -X POST "$RES" -H "$J" -d "$LIST" | grep -i '^www-authenticate:' | tr -d '\r')
 expect "challenge names resource metadata" 1 "$(echo "$CHAL" | grep -c 'resource_metadata=')"
+PRM=$(echo "$CHAL" | sed -n 's/.*resource_metadata="\([^"]*\)".*/\1/p')
+expect "resource metadata names the resource and this API's issuer" "$RES $B/api/auth" "$(curl -s -m 30 "$PRM" | json "d['resource']+' '+' '.join(d['authorization_servers'])")"
+expect "authorization server metadata at the root" "$B/api/auth" "$(curl -s -m 30 "$B/.well-known/oauth-authorization-server/api/auth" | json "d['issuer']")"
 expect "session cookie only" 401 "$(mcp_code -H "cookie: $C")"
 expect "api key only" 401 "$(mcp_code -H "x-api-key: org_not-a-bearer-token")"
 # Same issuer and signing key, other audience (the client): must not be accepted as an MCP token.

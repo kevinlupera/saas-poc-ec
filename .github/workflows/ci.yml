@@ -61,3 +61,4 @@ jobs:
           exit 1
       - run: pnpm e2e:auth
       - run: pnpm e2e:tenant
+      - run: pnpm e2e:oauth
