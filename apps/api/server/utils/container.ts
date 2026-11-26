@@ -1,6 +1,6 @@
 // Composition root: the only place that knows core, auth and db together.
 // Config arrives as `unknown` (Nitro runtimeConfig) and is validated here, so this file
-// has no Nitro auto-imports and typechecks the same from api, mcp and web.
+// has no Nitro auto-imports and typechecks the same from api and web.
 import { betterAuthIdentity, createAuth, mcpPrincipal, resendSender, smtpSender } from '@saas/auth'
 import { authorizeAction, makeAuthenticateRequest } from '@saas/core'
 import { createDb, findMemberRole } from '@saas/db'

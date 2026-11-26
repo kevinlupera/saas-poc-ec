@@ -22,9 +22,9 @@ export interface AuthConfig {
   baseURL: string
   /** Browser origin(s) allowed to call the auth endpoints. */
   trustedOrigins: string[]
-  /** Origin of the web app that hosts the /sign-in and /consent pages. */
+  /** Origin of the web app that hosts the /login and /consent pages. */
   webOrigin: string
-  /** Canonical HTTPS URL of the MCP resource, must match what apps/mcp serves. */
+  /** Canonical URL of the MCP resource (`<API origin>/mcp`, served by apps/api); the token audience. */
   mcpResource: string
   /** Delivers verification emails (Resend in production, Mailpit SMTP locally). */
   sendEmail: SendEmail
