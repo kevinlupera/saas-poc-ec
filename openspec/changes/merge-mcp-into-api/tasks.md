@@ -7,8 +7,8 @@
 
 ## 2. Agent principal from token claims
 
-- [ ] 2.1 Write failing tests in `packages/auth/test/` for `mcpPrincipal(claims, findMemberRole)`: member with `tenant_id` → `agent` with tenant and role; `tenant_id` but no membership → agent without tenant; no `tenant_id` → agent without tenant; missing/non-string `sub` → throws `UnauthenticatedError`. Verify: `pnpm --filter @saas/auth test` fails for the right reason
-- [ ] 2.2 Implement `mcpPrincipal` in `packages/auth/src/adapters/` next to `agentPrincipal`, export it, and wire `authenticateMcp(claims)` in `container.ts` with `findMemberRole` on the container db. Verify: tests from 2.1 pass, `pnpm check:boundaries` passes
+- [x] 2.1 Write failing tests in `packages/auth/test/` for `mcpPrincipal(claims, findMemberRole)`: member with `tenant_id` → `agent` with tenant and role; `tenant_id` but no membership → agent without tenant; no `tenant_id` → agent without tenant; missing/non-string `sub` → throws `UnauthenticatedError`. Verify: `pnpm --filter @saas/auth test` fails for the right reason
+- [x] 2.2 Implement `mcpPrincipal` in `packages/auth/src/adapters/` next to `agentPrincipal`, export it, and wire `authenticateMcp(claims)` in `container.ts` with `findMemberRole` on the container db. Verify: tests from 2.1 pass, `pnpm check:boundaries` passes
 
 ## 3. MCP endpoint in apps/api
 

@@ -1,9 +1,9 @@
 // Composition root: the only place that knows core, auth and db together.
 // Config arrives as `unknown` (Nitro runtimeConfig) and is validated here, so this file
 // has no Nitro auto-imports and typechecks the same from api, mcp and web.
-import { betterAuthIdentity, createAuth, resendSender, smtpSender } from '@saas/auth'
+import { betterAuthIdentity, createAuth, mcpPrincipal, resendSender, smtpSender } from '@saas/auth'
 import { authorizeAction, makeAuthenticateRequest } from '@saas/core'
-import { createDb } from '@saas/db'
+import { createDb, findMemberRole } from '@saas/db'
 import { z } from 'zod'
 
 const ConfigSchema = z.object({
@@ -56,8 +56,9 @@ let cached: ReturnType<typeof build> | undefined
 
 function build(rawConfig: unknown) {
   const cfg = parseConfig(rawConfig)
+  const db = createDb(cfg.databaseUrl)
   const auth = createAuth({
-    db: createDb(cfg.databaseUrl),
+    db,
     secret: cfg.authSecret,
     baseURL: cfg.authBaseUrl,
     trustedOrigins: [cfg.webOrigin],
@@ -66,7 +67,14 @@ function build(rawConfig: unknown) {
     google: cfg.google,
     sendEmail: cfg.mail.kind === 'resend' ? resendSender(cfg.mail) : smtpSender(cfg.mail),
   })
-  return { auth, authenticate: makeAuthenticateRequest(betterAuthIdentity(auth)), authorize: authorizeAction }
+  return {
+    cfg,
+    auth,
+    authenticate: makeAuthenticateRequest(betterAuthIdentity(auth)),
+    /** MCP tool caller, from verified access-token claims plus current membership. */
+    authenticateMcp: (claims: Record<string, unknown>) => mcpPrincipal(claims, (userId, tenantId) => findMemberRole(db, userId, tenantId)),
+    authorize: authorizeAction,
+  }
 }
 
 /** Built once per Lambda container. */
