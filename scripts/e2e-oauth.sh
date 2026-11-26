@@ -43,6 +43,13 @@ expect "api key only" 401 "$(mcp_code -H "x-api-key: org_not-a-bearer-token")"
 [ -n "$IDT" ] && expect "id_token (other audience)" 401 "$(mcp_code -H "authorization: Bearer $IDT")"
 expect "tampered token" 401 "$(mcp_code -H "authorization: Bearer ${AT%?}x")"
 
+echo "--- tools act for the user inside the token tenant"
+call(){ mcp -H "authorization: Bearer $AT" -d "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"$1\",\"arguments\":$2}}"; }
+expect "tenant_me: token tenant" "$ORG" "$(call tenant_me '{}' | json "d['result']['structuredContent']['tenantId']")"
+expect "tenant_me: owner, acting as agent" "agent owner" "$(call tenant_me '{}' | json "d['result']['structuredContent']['kind']+' '+d['result']['structuredContent']['role']")"
+expect "tenant_me: other tenant denied" "True Forbidden" "$(call tenant_me '{"tenantId":"not-mine"}' | json "str(d['result'].get('isError'))+' '+d['result']['content'][0]['text']")"
+expect "me: agent for the user" agent "$(call me '{}' | json "d['result']['structuredContent']['kind']")"
+
 echo "--- consent screen can show the client name"
 expect "client name" e2e "$(curl -s -m 30 "$B/api/auth/oauth2/public-client?client_id=$CID" -H "cookie: $C" | json "d.get('client_name')")"
 exit $FAIL

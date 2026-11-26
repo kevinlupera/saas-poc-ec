@@ -1,10 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { HealthResponseSchema } from '@saas/shared'
+import { health } from '../../utils/endpoints.ts'
+import { ok } from '../server.ts'
 
 /** The API endpoint this tool exposes. Checked by `pnpm check:api`. */
 export const route = 'GET /api/health'
 
-/** Read-only: whether the platform API is available. */
+/** Read-only: whether the platform API is available. Needs no tenant. */
 export function register(server: McpServer) {
   server.registerTool(
     'api_status',
@@ -15,9 +17,6 @@ export function register(server: McpServer) {
       outputSchema: HealthResponseSchema.shape,
       annotations: { readOnlyHint: true },
     },
-    () => {
-      const health = { status: 'ok' as const, service: 'saas-api' }
-      return { content: [{ type: 'text', text: JSON.stringify(health) }], structuredContent: health }
-    },
+    () => ok(health()),
   )
 }
