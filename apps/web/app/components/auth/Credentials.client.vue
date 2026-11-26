@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { LoaderCircle } from 'lucide-vue-next'
-import { AUTH_ROUTES, authCallback, emailError, oauthContinuation, passwordError, focusFirstError } from '../../utils/auth'
+import { authCallback, emailError, passwordError, focusFirstError } from '../../utils/auth'
 
 const props = defineProps<{ register?: boolean }>()
 const auth = useAuth()
@@ -46,13 +46,11 @@ async function submit() {
         await navigateTo('/verificar-email')
         return
       }
-      await navigateTo('/auth/complete')
-      return
     }
-    // An agent's OAuth authorization resumes at the URL the API returned (consent or the agent itself).
-    const next = oauthContinuation(window.location.search, result.data)
-    if (next === AUTH_ROUTES.complete) await navigateTo(next)
-    else window.location.href = next
+    // During an agent's OAuth authorization the API answers `{ redirect: true, url }` (consent, or the
+    // agent itself when consent was already given) and the auth client is already navigating there.
+    if (!props.register && (result.data as { redirect?: boolean } | null)?.redirect) return
+    await navigateTo('/auth/complete')
   })
 }
 

@@ -27,11 +27,11 @@ onMounted(async () => {
 
 async function decide(accept: boolean) {
   await run(async () => {
-    const res = await auth.$fetch<{ url?: string }>('/oauth2/consent', { method: 'POST', body: { accept } })
+    const res = await auth.$fetch<{ redirect?: boolean; url?: string }>('/oauth2/consent', { method: 'POST', body: { accept } })
     if (res.error) throw res.error
-    // The API answers with the agent's registered callback (code or access_denied).
-    if (!res.data?.url) throw new Error('Missing redirect')
-    window.location.href = res.data.url
+    // The API answers `{ redirect: true, url }` with the agent's registered callback (code or
+    // access_denied); the auth client follows it.
+    if (!res.data?.redirect || !res.data.url) throw new Error('Missing redirect')
   })
 }
 </script>

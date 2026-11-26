@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import { createWebAuthClient } from '../app/utils/auth-client.ts'
-import { AUTH_ROUTES, authCallback, authErrorMessage, emailError, oauthContinuation, passwordError } from '../app/utils/auth.ts'
+import { AUTH_ROUTES, authCallback, authErrorMessage, emailError, passwordError } from '../app/utils/auth.ts'
 
 for (const base of ['http://localhost:3001', 'https://identity.example.test', 'https://identity.example.test/api/auth/']) {
   test(`client uses configured API and cookies: ${base}`, async (t) => {
@@ -83,17 +83,4 @@ test('during an OAuth authorization, auth calls carry the signed query so the AP
 
 test('outside an OAuth authorization, auth calls carry no OAuth query', async (t) => {
   assert.equal((await postFrom(t, '?next=/admin')).oauth_query, undefined)
-})
-
-test('after sign-in, only an OAuth authorization follows the URL the API returns', () => {
-  const consent = { redirect: true, url: 'https://web.example.test/consent?client_id=agent&sig=x' }
-  // Consent already given: the API sends the browser straight back to the agent's registered callback.
-  const agentCallback = { redirect: true, url: 'http://127.0.0.1:8123/cb?code=abc&state=xyz' }
-  assert.equal(oauthContinuation(SIGNED, consent), consent.url)
-  assert.equal(oauthContinuation(SIGNED, agentCallback), agentCallback.url)
-  assert.equal(oauthContinuation('', consent), AUTH_ROUTES.complete)
-  assert.equal(oauthContinuation('?sig=forged-without-params', agentCallback), AUTH_ROUTES.complete)
-  assert.equal(oauthContinuation(SIGNED, { redirect: false, token: 't' }), AUTH_ROUTES.complete)
-  assert.equal(oauthContinuation(SIGNED, { redirect: true, url: 'javascript:alert(1)' }), AUTH_ROUTES.complete)
-  assert.equal(oauthContinuation(SIGNED, null), AUTH_ROUTES.complete)
 })

@@ -52,7 +52,7 @@ for (const path of ['/terms', '/privacy', '/support']) {
   })
 }
 
-for (const path of ['/login', '/registro', '/recuperar-contrasena', '/restablecer-contrasena', '/verificar-email', '/auth/complete']) {
+for (const path of ['/login', '/registro', '/recuperar-contrasena', '/restablecer-contrasena', '/verificar-email', '/auth/complete', '/consent']) {
   test(`direct static route and reload: ${path}`, async ({ page }) => {
     await api(page)
     const response = await page.goto(path)
@@ -397,7 +397,7 @@ test('landing links, keyboard focus, mobile widths and theme stay usable', async
   await page.keyboard.press('Tab')
   await expect(page.getByLabel('Contraseña', { exact: true })).toBeFocused()
   await page.setViewportSize({ width: 320, height: 740 })
-  for (const path of ['/login', '/registro', '/recuperar-contrasena', '/restablecer-contrasena', '/verificar-email', '/auth/complete']) {
+  for (const path of ['/login', '/registro', '/recuperar-contrasena', '/restablecer-contrasena', '/verificar-email', '/auth/complete', '/consent']) {
     await page.goto(path)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -412,4 +412,79 @@ test('landing links, keyboard focus, mobile widths and theme stay usable', async
   await page.getByRole('button', { name: 'Abrir menú' }).click()
   await page.locator('a[href="/registro"]').filter({ visible: true }).first().click()
   await expect(page).toHaveURL('/registro')
+})
+
+// An agent's OAuth authorization: the API sends the browser to /login and /consent with a signed query.
+const SIGNED = 'client_id=agent&scope=openid%20email&ba_param=ba_param&ba_param=client_id&ba_param=scope&sig=signature'
+const AGENT = 'http://agent.example.test/cb'
+async function agentApp(page: Page) {
+  await page.route(`${AGENT}**`, route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Agent</h1>' }))
+}
+
+test('OAuth: email sign-in sends the signed query and follows the consent URL the API returns', async ({ page }) => {
+  await api(page)
+  let body: Record<string, string> = {}
+  await page.route('**/api/auth/sign-in/email', route => {
+    body = route.request().postDataJSON()
+    return json(route, { redirect: true, url: `http://127.0.0.1:4173/consent?${SIGNED}` })
+  })
+  await page.goto(`/login?${SIGNED}`)
+  await credentials(page)
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  await expect(page).toHaveURL(/\/consent\?/)
+  expect(new URLSearchParams(body.oauth_query).get('sig')).toBe('signature')
+  await expect(page.getByRole('heading', { name: 'Autorizar acceso' })).toBeVisible()
+})
+
+test('OAuth: when consent was already given, sign-in goes straight back to the agent', async ({ page }) => {
+  await api(page)
+  await agentApp(page)
+  await page.route('**/api/auth/sign-in/email', route => json(route, { redirect: true, url: `${AGENT}?code=abc&state=xyz` }))
+  await page.goto(`/login?${SIGNED}`)
+  await credentials(page)
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  await expect(page).toHaveURL(`${AGENT}?code=abc&state=xyz`)
+})
+
+test('OAuth: Google sign-in sends the signed query', async ({ page }) => {
+  await api(page)
+  let body: Record<string, string> = {}
+  await page.route('**/api/auth/sign-in/social', route => {
+    body = route.request().postDataJSON()
+    return json(route, { code: 'PROVIDER_NOT_FOUND' }, 400)
+  })
+  await page.goto(`/login?${SIGNED}`)
+  await page.getByRole('button', { name: 'Continuar con Google' }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  expect(new URLSearchParams(body.oauth_query).get('sig')).toBe('signature')
+})
+
+for (const accept of [true, false]) {
+  test(`OAuth consent ${accept ? 'accept' : 'deny'} sends the decision and follows the API redirect`, async ({ page }) => {
+    await api(page)
+    await agentApp(page)
+    await page.route('**/api/auth/oauth2/public-client**', route => json(route, { client_name: 'Agente de prueba' }))
+    let body: Record<string, unknown> = {}
+    await page.route('**/api/auth/oauth2/consent', route => {
+      body = route.request().postDataJSON()
+      return json(route, { redirect: true, url: accept ? `${AGENT}?code=abc` : `${AGENT}?error=access_denied` })
+    })
+    await page.goto(`/consent?${SIGNED}`)
+    await expect(page.getByText('Agente de prueba', { exact: true })).toBeVisible()
+    await expect(page.getByText('Ver tu email', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: accept ? 'Permitir' : 'Rechazar' }).click()
+    await expect(page).toHaveURL(accept ? `${AGENT}?code=abc` : `${AGENT}?error=access_denied`)
+    expect(body.accept).toBe(accept)
+    expect(new URLSearchParams(String(body.oauth_query)).get('sig')).toBe('signature')
+  })
+}
+
+test('OAuth consent: a rejected request shows a safe error and stays usable', async ({ page }) => {
+  await api(page)
+  await page.route('**/api/auth/oauth2/consent', route => json(route, { error: 'invalid_signature', message: '<b>internal-secret</b>' }, 400))
+  await page.goto(`/consent?${SIGNED}`)
+  await page.getByRole('button', { name: 'Permitir' }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByText('internal-secret', { exact: false })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Permitir' })).toBeEnabled()
 })
