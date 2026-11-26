@@ -14,7 +14,8 @@
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:api": "node scripts/check-api-contract.mjs",
     "typecheck": "pnpm --filter @saas/api --filter @saas/mcp run types && pnpm -r run typecheck",
-    "check": "pnpm check:boundaries && pnpm check:tokens && pnpm check:api && pnpm typecheck",
+    "check": "pnpm check:boundaries && pnpm check:tokens && pnpm check:api && pnpm typecheck && pnpm lint",
+    "lint": "eslint",
     "check:tokens": "pnpm --filter @saas/tokens test",
     "test": "pnpm -r --if-present run test && node --test scripts/*.test.mjs",
     "mcp:inspect": "pnpm dlx @modelcontextprotocol/inspector@2.13.0"
@@ -24,7 +25,9 @@
     "node": "^22.21.0 || ^24.11.0 || >=26.0.0"
   },
   "devDependencies": {
+    "eslint": "10.15.0",
     "lefthook": "2.2.2",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.74.0"
   }
 }

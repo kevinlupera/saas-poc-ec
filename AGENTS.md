@@ -20,7 +20,8 @@ Dependency rule: `apps/* -> auth/db -> core`. `core` imports nothing from better
 ## Commands
 
 ```bash
-pnpm check            # boundaries + API contract + typecheck (run before every commit)
+pnpm check            # boundaries + API contract + typecheck + lint (run before every commit)
+pnpm lint             # backend: no detached promises (Lambda freezes after the response)
 pnpm test             # unit tests: core, auth, db (pure), api, mcp, scripts (check:api)
 docker compose up -d  # Postgres (:5433) + Mailpit (SMTP :1025, inbox/API http://localhost:8025)
 pnpm test:db          # RLS / tenant isolation against Postgres (docker compose up -d first)
@@ -74,6 +75,7 @@ Status: the core rules exist and are tested. Wiring (Better Auth `twoFactor` plu
 
 ## Testing and conventions
 
+- Lambda (`aws_lambda` preset) freezes the process once the response is sent: await every side effect (email, HTTP calls) before returning. `pnpm lint` rejects floating promises, `void promise` and async functions without `await`; do not disable those rules to make code pass.
 - Write the failing test first and watch it fail for the right reason. Isolation bugs are easy to write and hard to see: add a regression test with every fix.
 - Unit tests use `node --test` with `.ts` files (relative imports keep the `.ts` extension).
 - Generated artifacts (code, comments, UI copy, docs) are in English. Conventional Commits.
