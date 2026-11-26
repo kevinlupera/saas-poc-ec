@@ -24,7 +24,7 @@
 
 ## 5. Contract check
 
-- [ ] 5.1 Point `scripts/check-api-contract.mjs` `TOOLS_DIR` and its messages at `apps/api/server/mcp/tools`, update fixtures in `scripts/check-api-contract.test.mjs`, remove the `GET /api/me` and `GET /api/tenants/{tenantId}/me` exemptions and shorten the api-keys reason to the human-confirmation design. Verify: `pnpm check:api` and `pnpm test` pass
+- [x] 5.1 Point `scripts/check-api-contract.mjs` `TOOLS_DIR` and its messages at `apps/api/server/mcp/tools`, update fixtures in `scripts/check-api-contract.test.mjs`, remove the `GET /api/me` and `GET /api/tenants/{tenantId}/me` exemptions and shorten the api-keys reason to the human-confirmation design. Verify: `pnpm check:api` and `pnpm test` pass
 
 ## 6. Remove apps/mcp
 

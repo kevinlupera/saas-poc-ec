@@ -1,6 +1,6 @@
 // Backend rule: every API endpoint in apps/api/server/api has
 //   1. OpenAPI metadata (`defineRouteMeta`), and
-//   2. an MCP tool in apps/mcp/server/tools that declares `export const route = 'METHOD /path'`,
+//   2. an MCP tool in apps/api/server/mcp/tools that declares `export const route = 'METHOD /path'`,
 //      or an explicit, reasoned entry in scripts/api-contract.exemptions.json.
 // Run with `pnpm check:api` (part of `pnpm check`). Static: it reads the source files.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 // API_CONTRACT_ROOT lets the test suite point the checker at fixture trees.
 const root = process.env.API_CONTRACT_ROOT ?? fileURLToPath(new URL('..', import.meta.url))
 const API_DIR = join(root, 'apps/api/server/api')
-const TOOLS_DIR = join(root, 'apps/mcp/server/tools')
+const TOOLS_DIR = join(root, 'apps/api/server/mcp/tools')
 const EXEMPTIONS = join(root, 'scripts/api-contract.exemptions.json')
 const ROUTE_FILE = /^(.*)\.(get|post|put|patch|delete)\.ts$/
 const REQUIRED_META = ['operationId:', 'tags:', 'description:', 'responses:']
@@ -76,7 +76,7 @@ for (const e of exemptions) {
 
 for (const route of routes.keys()) {
   if (!tools.has(route) && !exempt.has(route)) {
-    errors.push(`${route}: no MCP tool. Add apps/mcp/server/tools/<name>.ts exporting \`route = '${route}'\`, or an exemption with a reason`)
+    errors.push(`${route}: no MCP tool. Add apps/api/server/mcp/tools/<name>.ts exporting \`route = '${route}'\`, or an exemption with a reason`)
   }
 }
 for (const [route, file] of tools) if (!routes.has(route)) errors.push(`${file}: declares route '${route}' which does not exist`)
