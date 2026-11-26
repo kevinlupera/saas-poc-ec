@@ -42,7 +42,8 @@
 ## 8. Integration
 
 - [x] 8.1 Finish `scripts/e2e-oauth.sh`: follow the 401 challenge's `resource_metadata` and assert it names the API issuer, call `tools/call` `tenant_me` asserting the token tenant, and check the anonymous authorize redirect goes to `/login`; add `pnpm e2e:oauth` to `.github/workflows/ci.yml` after `e2e:tenant` (it only needs the API now). Verify: `pnpm e2e:oauth` passes locally and in CI with only api + Postgres + Mailpit
-- [ ] 8.2 Compare `pnpm --filter @saas/api build` `.output` size before and after and record it in the PR description. Verify: build succeeds, `pnpm check` and `pnpm test` pass
+- [x] 8.2 Compare `pnpm --filter @saas/api build` `.output` size before and after and record it in the PR description. Verify: build succeeds, `pnpm check` and `pnpm test` pass
+  - Result (`du -sk .output`, aws_lambda): API 10.9 MB → 12.4 MB (+1.5 MB); the removed MCP Lambda was 6.0 MB, so 16.9 MB across two functions becomes 12.4 MB in one.
 
 ## Workflow follow-up
 
