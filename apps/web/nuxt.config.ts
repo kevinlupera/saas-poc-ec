@@ -25,7 +25,6 @@ export default defineNuxtConfig({
   },
   // Auth pages depend on the browser URL/session: render client-side only.
   routeRules: {
-    '/sign-in': { ssr: false },
     '/consent': { ssr: false },
   },
   runtimeConfig: {

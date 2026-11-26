@@ -24,6 +24,13 @@ URL="$B/api/auth/oauth2/authorize?response_type=code&client_id=$CID&redirect_uri
 LOC=$(curl -s -m 30 -i "$URL" -H "cookie: $C" | grep -i '^location:' | sed 's/^[Ll]ocation: //' | tr -d '\r')
 echo "authorize (signed in) -> $(echo "$LOC" | cut -c1-100)"
 Q=${LOC#*\?}
+ANON=$(curl -s -m 30 -i "$URL" | grep -i '^location:' | sed 's/^[Ll]ocation: //' | tr -d '\r')
+expect "anonymous authorize goes to the web /login with a signed query" "$WEB/login sig" "$(python3 -c "import sys,urllib.parse as u; p=u.urlparse(sys.argv[1]); print(f'{p.scheme}://{p.netloc}{p.path}', 'sig' if 'sig' in u.parse_qs(p.query) else '')" "$ANON")"
+# What /login does (oauthProviderClient): sign in with the signed query; the API answers with the consent URL.
+SQ=${ANON#*\?}
+SIGNIN=$(curl -s -m 30 -X POST $B/api/auth/sign-in/email -H "$J" -H "$O" -d "{\"email\":\"p$S@t.co\",\"password\":\"password1234\",\"oauth_query\":\"$SQ\"}")
+expect "email sign-in resumes the authorization at consent" "True $WEB/consent" "$(echo "$SIGNIN" | json "str(d.get('redirect'))+' '+d.get('url','').split('?')[0]")"
+expect "tampered signed query is rejected" 400 "$(curl -s -m 30 -o /dev/null -w '%{http_code}' -X POST $B/api/auth/sign-in/email -H "$J" -H "$O" -d "{\"email\":\"p$S@t.co\",\"password\":\"password1234\",\"oauth_query\":\"${SQ/scope=openid/scope=email}\"}")"
 R=$(curl -s -m 30 -X POST $B/api/auth/oauth2/consent -H "$J" -H "$O" -H "cookie: $C" -d "{\"accept\":true,\"oauth_query\":\"$Q\"}")
 CODE=$(echo "$R" | json "d.get('url','')" | python3 -c "import urllib.parse,sys;print(urllib.parse.parse_qs(urllib.parse.urlparse(sys.stdin.read().strip()).query).get('code',[''])[0])")
 T=$(curl -s -m 30 -X POST $B/api/auth/oauth2/token -H 'content-type: application/x-www-form-urlencoded' --data-urlencode grant_type=authorization_code --data-urlencode code=$CODE --data-urlencode code_verifier=$V --data-urlencode redirect_uri=$RED --data-urlencode client_id=$CID --data-urlencode resource=$RES)

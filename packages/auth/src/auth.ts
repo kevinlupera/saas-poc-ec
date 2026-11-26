@@ -147,7 +147,8 @@ export function createAuth(config: AuthConfig) {
         },
       }),
       mcp({
-        loginPage: `${config.webOrigin}/sign-in`,
+        // The same /login as the web (email or Google); it forwards the signed query so the authorization resumes.
+        loginPage: `${config.webOrigin}/login`,
         consentPage: `${config.webOrigin}/consent`,
         resource: config.mcpResource,
         // The consent is tied to the session's active tenant, so tokens say which tenant they act in.

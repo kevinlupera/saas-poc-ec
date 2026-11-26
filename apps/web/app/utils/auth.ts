@@ -8,6 +8,28 @@ export function authCallback(origin: string, destination: keyof typeof AUTH_ROUT
   return new URL(AUTH_ROUTES[destination], origin).href
 }
 
+const SCRIPT_SCHEMES = new Set(['javascript:', 'data:', 'vbscript:'])
+
+/**
+ * Where to go after sign-in. During an agent's OAuth authorization the page carries the API's signed
+ * query, and the sign-in response holds the URL that resumes it (the consent page, or the agent's
+ * registered callback when consent was already given). That URL comes from the API, never from the
+ * page query. Anything else ends at the normal return.
+ */
+export function oauthContinuation(search: string, data: unknown): string {
+  const params = new URLSearchParams(search)
+  const { redirect, url } = (data ?? {}) as { redirect?: unknown; url?: unknown }
+  if (params.has('sig') && params.has('ba_param') && redirect === true && typeof url === 'string') {
+    try {
+      const next = new URL(url)
+      if (!SCRIPT_SCHEMES.has(next.protocol)) return next.href
+    } catch {
+      // Not an absolute URL: fall through to the normal return.
+    }
+  }
+  return AUTH_ROUTES.complete
+}
+
 export type AuthError = { code?: string; status?: number }
 export function authErrorMessage(error?: AuthError | null) {
   if (error?.code === 'EMAIL_NOT_VERIFIED') return 'Verifica tu email antes de iniciar sesión.'
