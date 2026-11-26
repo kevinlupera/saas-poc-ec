@@ -39,3 +39,55 @@ test('verification email escapes the link in HTML', async () => {
   assert.match(mail.html, /href="http:\/\/a\/x\?t=1&amp;c=&quot;&lt;b&gt;"/)
   assert.match(mail.text, /http:\/\/a\/x\?t=1&c="<b>/)
 })
+
+// Lambda freezes once the response is sent: a send that is not awaited can be lost.
+async function authHooks() {
+  const { createAuth } = await import('../src/auth.ts')
+  const sent: string[] = []
+  let release = () => {}
+  const gate = new Promise<void>((resolve) => (release = resolve))
+  const auth = createAuth({
+    db: {} as never,
+    secret: 'x'.repeat(32),
+    baseURL: 'http://localhost:3001',
+    trustedOrigins: ['http://localhost:3000'],
+    webOrigin: 'http://localhost:3000',
+    mcpResource: 'http://localhost:3002/mcp',
+    sendEmail: async (message) => { await gate; sent.push(message.subject) },
+  })
+  return { options: auth.options, sent, release }
+}
+
+const settled = async (promise: Promise<unknown>) => {
+  let done = false
+  promise.then(() => (done = true), () => (done = true))
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  return done
+}
+
+test('verification email resolves only after delivery', async () => {
+  const { options, sent, release } = await authHooks()
+  const user = { email: 'ana@example.com' } as never
+  const pending = options.emailVerification!.sendVerificationEmail!({ user, url: 'http://localhost:3001/api/auth/verify-email?token=t', token: 't' })
+  assert.equal(await settled(pending), false)
+  release()
+  await pending
+  assert.equal(sent.length, 1)
+})
+
+test('sign-up with an existing email waits for one notice, like a new sign-up', async () => {
+  const { options, sent, release } = await authHooks()
+  const pending = options.emailAndPassword!.onExistingUserSignUp!({ user: { email: 'ana@example.com' } as never })
+  assert.equal(await settled(pending), false)
+  release()
+  await pending
+  assert.equal(sent.length, 1)
+})
+
+test('existing account notice links to sign-in and escapes it in HTML', async () => {
+  const { existingAccountEmail } = await import('../src/auth.ts')
+  const mail = existingAccountEmail('ana@example.com', 'http://a"<b>')
+  assert.equal(mail.to, 'ana@example.com')
+  assert.match(mail.text, /http:\/\/a"<b>\/login/)
+  assert.match(mail.html, /href="http:\/\/a&quot;&lt;b&gt;\/login"/)
+})

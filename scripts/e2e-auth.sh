@@ -21,6 +21,7 @@ R=$(signup_req "$E")
 expect "duplicate email: same status" 200 "$(echo "$R" | status)"
 expect "duplicate email: same shape, no token" "['token', 'user'] None" "$(echo "$R" | field "sorted(d), d['token']")"
 expect "duplicate email: no session cookie" "" "$(echo "$R" | cookies)"
+expect "duplicate email: owner gets one notice (same work as a new sign-up)" 1 "$(mail_count_subject "$E" 'Ya tienes una cuenta')"
 
 R=$(signup_req "short$S@t.co" "1234567")
 expect "short password rejected" 400 "$(echo "$R" | status)"
@@ -29,8 +30,8 @@ sleep 1; expect "short password sends no mail" 0 "$(mail_count "short$S@t.co")"
 R=$(signin "$E" password1234)
 expect "unverified sign-in refused" "403 EMAIL_NOT_VERIFIED" "$(echo "$R" | status) $(echo "$R" | field "d['code']")"
 expect "unverified sign-in sets no cookie" "" "$(echo "$R" | cookies)"
-LINK=$(mail_link "$E" 2) || LINK=''
-expect "unverified sign-in resends the mail" 2 "$(mail_count "$E")"
+LINK=$(mail_link "$E" 3) || LINK=''
+expect "unverified sign-in resends the mail" 3 "$(mail_count "$E")"
 
 R=$(curl -s -m 30 -i "$(echo "$LINK" | sed 's/token=[^&]*/token=tampered/')")
 expect "tampered token: error redirect" 1 "$(echo "$R" | grep -ic '^location:.*error=')"

@@ -10,7 +10,7 @@ import { findFirstTenantId, findMemberRole, type Db } from '@saas/db'
 import { betterAuth } from 'better-auth'
 import { admin, jwt, openAPI, organization } from 'better-auth/plugins'
 import { agentPrincipal } from './adapters/agent-principal.ts'
-import type { SendEmail } from './adapters/email.ts'
+import type { EmailMessage, SendEmail } from './adapters/email.ts'
 import { consentTenant, tenantClaims } from './adapters/tenant-claim.ts'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { adminAc, defaultStatements, ownerAc } from 'better-auth/plugins/organization/access'
@@ -51,6 +51,17 @@ export function verificationEmail(to: string, link: string) {
   }
 }
 
+/** Sent instead of a verification email when someone signs up with an address that already has an account. */
+export function existingAccountEmail(to: string, webOrigin: string) {
+  const link = `${webOrigin}/login`
+  return {
+    to,
+    subject: 'Ya tienes una cuenta en CitasSaaS',
+    text: `Alguien intentó crear una cuenta de CitasSaaS con este email, pero ya tienes una. Inicia sesión aquí:\n\n${link}\n\nSi no fuiste tú, ignora este mensaje.`,
+    html: `<p>Alguien intentó crear una cuenta de CitasSaaS con este email, pero ya tienes una.</p><p><a href="${escapeHtml(link)}">Iniciar sesión</a></p><p>Si no fuiste tú, ignora este mensaje.</p>`,
+  }
+}
+
 const API_KEY_ALL = ['create', 'read', 'update', 'delete'] as const
 const ac = createAccessControl({ ...defaultStatements, apiKey: API_KEY_ALL })
 // Roles from docs/historias-de-usuario-2.md NA-13. Fine-grained rules live in @saas/core.
@@ -65,24 +76,31 @@ const roles = {
 export const API_KEY_CONFIG = 'org-keys'
 
 export function createAuth(config: AuthConfig) {
+  // Awaited: Lambda freezes once the response is sent, so a detached send can be lost.
+  // A failed send is logged, not thrown, so the response never reveals whether mail went out.
+  // Log the failure kind only: never the URL, token or recipient.
+  const send = (message: EmailMessage) =>
+    config.sendEmail(message).catch((error: unknown) => {
+      console.error(JSON.stringify({ level: 'error', msg: 'email failed', subject: message.subject, error: error instanceof Error ? error.name : 'unknown' }))
+    })
   return betterAuth({
     database: drizzleAdapter(config.db, { provider: 'pg' }),
     secret: config.secret,
     baseURL: config.baseURL,
     trustedOrigins: config.trustedOrigins,
     // Unverified accounts get no session: sign-up and sign-in send a verification email instead.
-    emailAndPassword: { enabled: true, requireEmailVerification: true },
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: true,
+      // Account enumeration: a new sign-up waits for its verification email, so a sign-up with an
+      // existing address waits for one email too and both take the same time.
+      onExistingUserSignUp: ({ user }) => send(existingAccountEmail(user.email, config.webOrigin)),
+    },
     emailVerification: {
       sendOnSignUp: true,
       sendOnSignIn: true,
       autoSignInAfterVerification: true,
-      sendVerificationEmail: async ({ user, url }) => {
-        // Not awaited: response time must not depend on delivery (account enumeration).
-        // Log the failure kind only: never the URL, token or recipient.
-        void config.sendEmail(verificationEmail(user.email, verificationLink(url, config.webOrigin))).catch((error: unknown) => {
-          console.error(JSON.stringify({ level: 'error', msg: 'verification email failed', error: error instanceof Error ? error.name : 'unknown' }))
-        })
-      },
+      sendVerificationEmail: ({ user, url }) => send(verificationEmail(user.email, verificationLink(url, config.webOrigin))),
     },
     socialProviders: config.google ? { google: config.google } : {},
     account: {

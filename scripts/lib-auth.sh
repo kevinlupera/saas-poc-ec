@@ -19,6 +19,17 @@ sys.exit(1)
 PY
 }
 mail_count(){ python3 -c "import json,sys,urllib.parse,urllib.request;print(json.load(urllib.request.urlopen(sys.argv[1]+'/api/v1/search?query='+urllib.parse.quote('to:\"%s\"'%sys.argv[2]),timeout=10))['messages_count'])" "$MAILPIT" "$1"; }
+# Mails to $1 whose subject contains $2 (waits ~10s for at least one).
+mail_count_subject(){ python3 - "$MAILPIT" "$1" "$2" <<'PY2'
+import json, sys, time, urllib.parse, urllib.request
+base, to, subject = sys.argv[1:]
+for _ in range(50):
+    n = json.load(urllib.request.urlopen(base + '/api/v1/search?query=' + urllib.parse.quote(f'to:"{to}" subject:"{subject}"'), timeout=10))['messages_count']
+    if n: break
+    time.sleep(0.2)
+print(n)
+PY2
+}
 signup_req(){ curl -s -m 30 -i -X POST $B/api/auth/sign-up/email -H "$J" -H "$O" -d "{\"email\":\"$1\",\"password\":\"${2:-password1234}\",\"name\":\"e2e\",\"callbackURL\":\"$WEB/verificar-email\"}"; }
 # Sign up $1, open the emailed link, print the session cookie.
 verified_signup(){ local link; signup_req "$1" > /dev/null; link=$(mail_link "$1") || return 1; curl -s -m 30 -i "$link" | cookies; }
