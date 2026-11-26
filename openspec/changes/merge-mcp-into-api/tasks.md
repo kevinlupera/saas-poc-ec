@@ -18,7 +18,7 @@
 
 ## 4. Shared endpoint logic and tools
 
-- [ ] 4.1 Move post-authentication logic of `health.get.ts`, `me.get.ts` and `tenants/[tenantId]/me.get.ts` into plain functions in `apps/api/server/utils/endpoints.ts` and make the route handlers call them. Verify: `pnpm e2e:tenant` passes unchanged and `pnpm check` passes
+- [x] 4.1 Move post-authentication logic of `health.get.ts`, `me.get.ts` and `tenants/[tenantId]/me.get.ts` into plain functions in `apps/api/server/utils/endpoints.ts` and make the route handlers call them. Verify: `pnpm e2e:tenant` passes unchanged and `pnpm check` passes
 - [ ] 4.2 Write failing unit tests for the tool layer (tools take `authenticateMcp` and the shared functions as injected dependencies, so no DB is needed): `tenant_me` for a member returns the same tenant and role as the route, with `kind: 'agent'`; foreign `tenantId`, revoked membership and missing `tenant_id` all return the same forbidden tool error; `tenantId` defaults to the token's `tenant_id`. Verify: tests fail for the right reason
 - [ ] 4.3 Add `apps/api/server/mcp/tools/{api-status,me,tenant-me}.ts` (each exports `route`, read-only annotation, zod output schemas) and `apps/api/server/mcp/server.ts` registering them; tools call `authenticateMcp` then the shared functions, map core errors to one generic tool error, and set `event.context.tenantId`. Verify: tests from 4.2 pass and `pnpm typecheck` passes
 

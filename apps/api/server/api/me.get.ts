@@ -34,6 +34,7 @@ defineRouteMeta({
   },
 })
 
+import { whoAmI } from '../utils/endpoints'
 import { requirePrincipal } from '../utils/principal'
 
-export default defineEventHandler((event) => requirePrincipal(event, useRuntimeConfig(event)))
+export default defineEventHandler(async (event) => whoAmI(await requirePrincipal(event, useRuntimeConfig(event))))
