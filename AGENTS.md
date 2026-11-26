@@ -20,15 +20,21 @@ Dependency rule: `apps/* -> auth/db -> core`. `core` imports nothing from better
 ## Commands
 
 ```bash
-pnpm check            # boundaries + API contract + typecheck (run before every commit)
+pnpm check            # boundaries + API contract + typecheck + lint (run before every commit)
+pnpm lint             # backend: no detached promises (Lambda freezes after the response)
 pnpm test             # unit tests: core, auth, db (pure), api, mcp, scripts (check:api)
+docker compose up -d  # Postgres (:5433) + Mailpit (SMTP :1025, inbox/API http://localhost:8025)
 pnpm test:db          # RLS / tenant isolation against Postgres (docker compose up -d first)
-pnpm e2e:tenant       # tenant isolation over HTTP (api + Postgres running)
-pnpm e2e:oauth        # OAuth authorize -> consent -> token -> /mcp (api + mcp + Postgres running)
+pnpm e2e:auth         # sign-up -> Mailpit verification link -> session, sign-in/out, Google start (api + Postgres + Mailpit)
+pnpm e2e:tenant       # tenant isolation over HTTP (api + Postgres + Mailpit running)
+pnpm e2e:oauth        # OAuth authorize -> consent -> token -> /mcp (api + mcp + Postgres + Mailpit running)
+# e2e overrides when ports clash: API_BASE (must match NITRO_AUTH_BASE_URL), WEB_ORIGIN, MAILPIT, MCP_RESOURCE
 APP_DB_PASSWORD=saas_app pnpm --filter @saas/db db:app-role   # runtime DB role (after db:migrate)
 ```
 
 Git hooks (lefthook, `lefthook.yml`, installed by `pnpm install`): pre-commit runs `check:boundaries` and `check:api` on backend changes; commit-msg enforces Conventional Commits and rejects Co-Authored-By/AI attribution lines; pre-push runs `pnpm check` and `pnpm test`. Skip once with `LEFTHOOK=0` only if you must; never weaken the hooks to make a commit pass.
+
+Email verification is required: sign-up gives no session until the emailed link is opened. Mail goes to Resend when `NITRO_RESEND_API_KEY` is set (production requires it and `NITRO_EMAIL_FROM`, or the API refuses to start); otherwise to SMTP `NITRO_SMTP_HOST:NITRO_SMTP_PORT` (Mailpit). Google sign-in is on only when `NITRO_GOOGLE_CLIENT_ID` and `NITRO_GOOGLE_CLIENT_SECRET` are both set; it never links to an unverified account (`requireLocalEmailVerified`, keep it).
 
 Auth schema changes: `pnpm --filter @saas/auth auth:schema`, then `pnpm --filter @saas/db db:generate`.
 
@@ -69,6 +75,7 @@ Status: the core rules exist and are tested. Wiring (Better Auth `twoFactor` plu
 
 ## Testing and conventions
 
+- Lambda (`aws_lambda` preset) freezes the process once the response is sent: await every side effect (email, HTTP calls) before returning. `pnpm lint` rejects floating promises, `void promise` and async functions without `await`; do not disable those rules to make code pass.
 - Write the failing test first and watch it fail for the right reason. Isolation bugs are easy to write and hard to see: add a regression test with every fix.
 - Unit tests use `node --test` with `.ts` files (relative imports keep the `.ts` extension).
 - Generated artifacts (code, comments, UI copy, docs) are in English. Conventional Commits.

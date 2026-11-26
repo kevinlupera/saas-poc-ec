@@ -9,5 +9,11 @@ services:
       - '5433:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+  # Dev/test mail catcher: SMTP on 1025, UI and REST API on 8025. Mail is disposable (no volume).
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    ports:
+      - '1025:1025'
+      - '8025:8025'
 volumes:
   pgdata:

@@ -10,7 +10,7 @@ const fieldError = ref('')
 const accepted = ref(false)
 const form = ref<HTMLFormElement | null>(null)
 const verified = computed(() => !!(session?.value.data?.session && session.value.data.user.emailVerified && !session.value.error))
-const invalidLink = computed(() => props.verify && typeof route.query.error === 'string')
+const invalidLink = computed(() => props.verify && route.query.error != null)
 
 async function submit() {
   if (pending.value) return

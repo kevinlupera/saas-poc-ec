@@ -272,6 +272,9 @@ test('Google startup failure and cancelled return are recoverable', async ({ pag
   await page.goto('/login?error=access_denied&error_description=internal-secret')
   await expect(page.getByRole('alert')).toContainText('No pudimos completar el acceso con Google')
   await expect(page.getByText('internal-secret', { exact: false })).toHaveCount(0)
+  // Real Better Auth return on cancel: our `error=oauth` plus Google's own, i.e. a repeated parameter.
+  await page.goto('/login?error=oauth&error=access_denied')
+  await expect(page.getByRole('alert')).toContainText('No pudimos completar el acceso con Google')
   await expect(page.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeEnabled()
   await page.goto('/auth/complete?success=true')
   await expect(page.getByText('No hay una sesión activa.', { exact: false })).toBeVisible()

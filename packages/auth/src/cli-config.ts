@@ -8,4 +8,5 @@ export const auth = createAuth({
   trustedOrigins: [],
   webOrigin: 'http://localhost:3000',
   mcpResource: 'https://localhost/mcp',
+  sendEmail: async () => {},
 })

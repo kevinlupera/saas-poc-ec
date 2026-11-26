@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Tenant isolation smoke test. Needs apps/api running on :3001 (NITRO_AUTH_SECRET set) and Postgres migrated
+# Tenant isolation smoke test. Needs apps/api running on :3001 or API_BASE (NITRO_AUTH_SECRET set), Mailpit and Postgres migrated
 # with the saas_app role created (`APP_DB_PASSWORD=saas_app pnpm --filter @saas/db db:app-role`).
 # Creates throwaway users/orgs. Exits non-zero if any expectation fails.
 set -u
-B=http://localhost:3001; O='origin: http://localhost:3000'; J='content-type: application/json'
+. "$(dirname "$0")/lib-auth.sh"
 S=$RANDOM; FAIL=0
 expect(){ if [ "$2" = "$3" ]; then echo "ok   $1 ($2)"; else echo "FAIL $1: expected $2, got $3"; FAIL=1; fi; }
 code(){ curl -s -m 30 -o /dev/null -w '%{http_code}' "$@"; }
-signup(){ curl -s -m 30 -i -X POST $B/api/auth/sign-up/email -H "$J" -H "$O" -d "{\"email\":\"$1$S@t.co\",\"password\":\"password1234\",\"name\":\"$1\"}" | grep -i '^set-cookie' | sed 's/^[Ss]et-[Cc]ookie: //; s/;.*//' | paste -sd';' -; }
+signup(){ verified_signup "$1$S@t.co"; }
 org(){ curl -s -m 30 -X POST $B/api/auth/organization/create -H "$J" -H "$O" -H "cookie: $1" -d "{\"name\":\"$2\",\"slug\":\"$2$S\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])"; }
 setactive(){ curl -s -m 30 -o /dev/null -X POST $B/api/auth/organization/set-active -H "$J" -H "$O" -H "cookie: $1" -d "{\"organizationId\":\"$2\"}"; }
 mk(){ curl -s -m 30 -w '\n%{http_code}' -X POST $B/api/tenants/$1/api-keys -H "$J" -H "$O" -H "cookie: $2" -d "$3"; }

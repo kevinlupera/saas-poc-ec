@@ -12,7 +12,8 @@ const email = ref('')
 const password = ref('')
 const confirmation = ref('')
 const errors = ref<Record<string, string>>({})
-const providerError = computed(() => typeof route.query.error === 'string')
+// Better Auth appends the provider's own `error` to ours (`?error=oauth&error=access_denied`), so it can be an array.
+const providerError = computed(() => route.query.error != null)
 const callback = (destination: Parameters<typeof authCallback>[1]) => authCallback(window.location.origin, destination)
 
 async function submit() {

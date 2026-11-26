@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# OAuth + MCP smoke test: authorize -> consent -> token -> POST /mcp. Needs apps/api (:3001, NITRO_AUTH_SECRET set),
-# apps/mcp (:3002) and migrated Postgres. Expect: mcp with token 200, without token 401.
+# OAuth + MCP smoke test: authorize -> consent -> token -> POST /mcp. Needs apps/api (:3001 or API_BASE, NITRO_AUTH_SECRET set),
+# apps/mcp (:3002), migrated Postgres and Mailpit (docker compose up -d). Expect: mcp with token 200, without token 401.
 set -u
-B=http://localhost:3001; J='content-type: application/json'; O='origin: http://localhost:3000'; S=$RANDOM
-RES=http://localhost:3002/mcp; RED=http://127.0.0.1:8123/cb
-C=$(curl -s -m 30 -i -X POST $B/api/auth/sign-up/email -H "$J" -H "$O" -d "{\"email\":\"p$S@t.co\",\"password\":\"password1234\",\"name\":\"P\"}" | grep -i '^set-cookie' | sed 's/^[Ss]et-[Cc]ookie: //; s/;.*//' | paste -sd';' -)
+. "$(dirname "$0")/lib-auth.sh"; S=$RANDOM
+RES=${MCP_RESOURCE:-http://localhost:3002/mcp}; RED=http://127.0.0.1:8123/cb
+C=$(verified_signup "p$S@t.co")
 ORG=$(curl -s -m 30 -X POST $B/api/auth/organization/create -H "$J" -H "$O" -H "cookie: $C" -d "{\"name\":\"p\",\"slug\":\"p$S\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
 CID=$(curl -s -m 30 -X POST $B/api/auth/oauth2/create-client -H "$J" -H "$O" -H "cookie: $C" -d "{\"client_name\":\"e2e\",\"application_type\":\"native\",\"redirect_uris\":[\"$RED\"],\"token_endpoint_auth_method\":\"none\",\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"scope\":\"openid profile email offline_access\"}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('client_id') or d)")
 echo "client: $CID"
