@@ -31,10 +31,10 @@ See proposal.md (Why) for motivation and the OAuth research. Current state that 
    The MCP server and transport stay per request (stateless, `enableJsonResponse`), as today.
 
 2. **Default resource URL `http://localhost:3001/mcp`.**
-   `mcpResource` must be the URL clients call, so it becomes `<API origin>/mcp` (`NITRO_MCP_RESOURCE`). `ConfigSchema` adds a rule that `mcpResource` has the same origin as `authBaseUrl`, so a stale `:3002` value fails at startup instead of producing tokens nobody accepts.
+   `mcpResource` must be the URL clients call, so it becomes `<API origin>/mcp` (`NITRO_MCP_RESOURCE`). `ConfigSchema` adds a rule that `mcpResource` is exactly `<authBaseUrl origin>/mcp` (the route is fixed), so a stale `:3002` value fails at startup instead of producing tokens nobody accepts.
 
 3. **RFC 9728 metadata through the existing discovery proxy.**
-   Add `oauth-protected-resource` to `utils/discovery.ts`: `oauth-protected-resource` and `oauth-protected-resource/mcp` map to the plugin's path under `/api/auth/.well-known/`; other suffixes return null (404). The exact plugin path is verified in the unit test and in `e2e:oauth` (follow the challenge's `resource_metadata`). Delete the hand-written route; no second copy of the metadata.
+   Add `oauth-protected-resource` to `utils/discovery.ts`: `oauth-protected-resource` and `oauth-protected-resource/mcp` pass through unchanged, because the plugin answers them at the root path (its `onRequest` hook matches the full pathname); other suffixes return null (404). The exact plugin path is verified in the unit test and in `e2e:oauth` (follow the challenge's `resource_metadata`). Delete the hand-written route; no second copy of the metadata.
    *Alternative:* keep `isResourceMetadataPath` and the hand-written JSON. Rejected: duplicates what the plugin serves and can drift (e.g. DPoP algorithms).
 
 4. **Agent principal from claims: `mcpPrincipal` in `packages/auth`.**

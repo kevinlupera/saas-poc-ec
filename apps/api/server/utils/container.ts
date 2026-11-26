@@ -30,9 +30,9 @@ const rules = (env: Env) => (cfg: z.infer<typeof ConfigSchema>, ctx: z.Refinemen
   if ((env.production || cfg.resendApiKey) && !cfg.emailFrom) missing('emailFrom')
   if (cfg.googleClientId && !cfg.googleClientSecret) missing('googleClientSecret')
   if (cfg.googleClientSecret && !cfg.googleClientId) missing('googleClientId')
-  // MCP is served by this API (`/mcp`), so its resource URL must share the API origin.
-  if (new URL(cfg.mcpResource).origin !== new URL(cfg.authBaseUrl).origin) {
-    ctx.addIssue({ code: 'custom', path: ['mcpResource'], message: 'must be on the API origin' })
+  // MCP is served by this API at `/mcp`, so the resource URL (token audience) must be exactly that.
+  if (cfg.mcpResource !== new URL('/mcp', cfg.authBaseUrl).href) {
+    ctx.addIssue({ code: 'custom', path: ['mcpResource'], message: 'must be <API origin>/mcp' })
   }
 }
 

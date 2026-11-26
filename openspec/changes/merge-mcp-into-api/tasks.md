@@ -3,7 +3,7 @@
 ## 1. Dependencies and config
 
 - [x] 1.1 Add `@modelcontextprotocol/sdk`, `@cfworker/json-schema` and `@better-auth/mcp` (same versions as `apps/mcp`) to `apps/api` (no `jose`: token tests run in `e2e:oauth`). Verify: `pnpm install` succeeds and `pnpm check:boundaries` passes
-- [x] 1.2 Write failing tests in `apps/api/test/config.test.ts`: `mcpResource` with an origin different from `authBaseUrl` fails naming `mcpResource` (no values); `http://localhost:3001/mcp` with `authBaseUrl` `http://localhost:3001` passes. Then add the rule in `container.ts` and change the `mcpResource` default in `apps/api/nitro.config.ts`, `apps/api/.env.example`, CI env, `apps/api/test/config.test.ts` and `packages/auth/test/email.test.ts` to `http://localhost:3001/mcp`; set the local gitignored `apps/api/.env` `NITRO_MCP_RESOURCE` to `<NITRO_AUTH_BASE_URL>/mcp`. Verify: `pnpm --filter @saas/api test` passes and `pnpm dev:api` starts
+- [x] 1.2 Write failing tests in `apps/api/test/config.test.ts`: `mcpResource` other than `<authBaseUrl origin>/mcp` (other origin or other path) fails naming `mcpResource` (no values); `http://localhost:3001/mcp` with `authBaseUrl` `http://localhost:3001` passes. Then add the rule in `container.ts` and change the `mcpResource` default in `apps/api/nitro.config.ts`, `apps/api/.env.example`, CI env, `apps/api/test/config.test.ts` and `packages/auth/test/email.test.ts` to `http://localhost:3001/mcp`; set the local gitignored `apps/api/.env` `NITRO_MCP_RESOURCE` to `<NITRO_AUTH_BASE_URL>/mcp`. Verify: `pnpm --filter @saas/api test` passes and `pnpm dev:api` starts
 
 ## 2. Agent principal from token claims
 
@@ -12,9 +12,9 @@
 
 ## 3. MCP endpoint in apps/api
 
-- [ ] 3.1 Extend `scripts/e2e-oauth.sh` first (signing keys live in Postgres, so this cannot be a unit test): default `MCP_RESOURCE` to `$B/mcp`; no token → 401 with `resource_metadata=`; session cookie only and `x-api-key` only → 401; a token minted for another `resource` → 401; valid token → 200 on `tools/list`. Verify: `pnpm e2e:oauth` fails against the API because `/mcp` does not exist yet
-- [ ] 3.2 Add `apps/api/server/routes/mcp.ts`: per request, `requireMcpAuth(getContainer(...).auth, handler, { resource: cfg.mcpResource, issuer: <authBaseUrl>/api/auth })` with a per-request `McpServer` + stateless `WebStandardStreamableHTTPServerTransport` (`enableJsonResponse`, `CfWorkerJsonSchemaValidator`). Verify: `pnpm e2e:oauth` assertions from 3.1 pass and `pnpm --filter @saas/web typecheck` still passes (web includes the API route types)
-- [ ] 3.3 Extend `utils/discovery.ts` so `oauth-protected-resource` and `oauth-protected-resource/mcp` map to the plugin's metadata path and other suffixes return null; add cases to `apps/api/test/discovery.test.ts`. Verify: test passes and, with `pnpm dev:api`, `curl localhost:3001/.well-known/oauth-protected-resource/mcp` returns `resource` = the MCP URL and `authorization_servers` with the API issuer; `/other` returns 404
+- [x] 3.1 Extend `scripts/e2e-oauth.sh` first (signing keys live in Postgres, so this cannot be a unit test): default `MCP_RESOURCE` to `$B/mcp`; no token → 401 with `resource_metadata=`; session cookie only and `x-api-key` only → 401; a token minted for another `resource` → 401; valid token → 200 on `tools/list`. Verify: `pnpm e2e:oauth` fails against the API because `/mcp` does not exist yet
+- [x] 3.2 Add `apps/api/server/routes/mcp.ts`: per request, `requireMcpAuth(getContainer(...).auth, handler, { resource: cfg.mcpResource, issuer: <authBaseUrl>/api/auth })` with a per-request `McpServer` + stateless `WebStandardStreamableHTTPServerTransport` (`enableJsonResponse`, `CfWorkerJsonSchemaValidator`). Verify: `pnpm e2e:oauth` assertions from 3.1 pass and `pnpm --filter @saas/web typecheck` still passes (web includes the API route types)
+- [x] 3.3 Extend `utils/discovery.ts` so `oauth-protected-resource` and `oauth-protected-resource/mcp` pass through to the plugin (it answers at the root path) and other suffixes return null; add cases to `apps/api/test/discovery.test.ts`. Verify: test passes and, with `pnpm dev:api`, `curl localhost:3001/.well-known/oauth-protected-resource/mcp` returns `resource` = the MCP URL and `authorization_servers` with the API issuer; `/other` returns 404
 
 ## 4. Shared endpoint logic and tools
 

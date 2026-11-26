@@ -65,4 +65,5 @@ test('only one Google credential fails, naming the missing key', () => {
 test('the MCP resource is served by the API itself (same origin)', () => {
   assert.equal(parseConfig(base, dev).mcpResource, 'http://localhost:3001/mcp')
   failsWith({ ...base, mcpResource: 'http://localhost:3002/mcp' }, dev, ['mcpResource'])
+  failsWith({ ...base, mcpResource: 'http://localhost:3001/other' }, dev, ['mcpResource'])
 })
