@@ -24,6 +24,7 @@ const AUTH_TABLES = new Set([
   'oauth_refresh_token',
   'oauth_resource',
   'organization',
+  'rate_limit',
   'session',
   'user',
   'verification',
