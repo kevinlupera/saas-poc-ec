@@ -7,10 +7,10 @@ pre-commit:
   parallel: true
   commands:
     boundaries:
-      glob: "{packages/core,packages/auth,packages/db,apps/api,apps/mcp,scripts}/**/*"
+      glob: "{packages/core,packages/auth,packages/db,apps/api,scripts}/**/*"
       run: pnpm check:boundaries
     api-contract:
-      glob: "{apps/api/server/api,apps/mcp/server/tools,scripts}/**/*"
+      glob: "{apps/api/server/api,apps/api/server/mcp/tools,scripts}/**/*"
       run: pnpm check:api
 
 commit-msg:

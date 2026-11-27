@@ -1,4 +1,5 @@
 import type { HealthResponse } from '@saas/shared'
+import { health } from '../utils/endpoints'
 
 defineRouteMeta({
   openAPI: {
@@ -32,7 +33,4 @@ defineRouteMeta({
   },
 })
 
-export default defineEventHandler((): HealthResponse => ({
-  status: 'ok',
-  service: 'saas-api',
-}))
+export default defineEventHandler((): HealthResponse => health())

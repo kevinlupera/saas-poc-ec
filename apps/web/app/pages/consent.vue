@@ -1,43 +1,73 @@
 <script setup lang="ts">
-const auth = useAuthClient()
-const route = useRoute()
+import { LoaderCircle } from 'lucide-vue-next'
 
-// The server redirects here with `client_id` and `scope`. The consent call below sends the
-// signed `oauth_query` (via oauthProviderClient), so the server rejects any tampered request.
+definePageMeta({ layout: 'auth' })
+useHead({ title: 'Autorizar acceso | CitasSaaS' })
+
+// The API redirects here with `client_id`, `scope` and its signature. The consent call forwards the
+// signed `oauth_query` (oauthProviderClient), so the API rejects any tampered request.
+const auth = useAuth()
+const route = useRoute()
+const { pending, error, run } = useAuthAction()
 const clientId = String(route.query.client_id ?? '')
-const scopes = String(route.query.scope ?? '').split(' ').filter(Boolean)
-const error = ref('')
-const busy = ref(false)
+const clientName = ref('')
+// Where the authorization code goes: the user should recognise it.
+const redirectHost = URL.canParse(String(route.query.redirect_uri ?? '')) ? new URL(String(route.query.redirect_uri)).host : ''
+// Only a CIMD client (its id is the https URL of its metadata) proves who runs it; any other
+// client (self-registered or created by hand) names itself.
+const verified = URL.canParse(clientId) && new URL(clientId).protocol === 'https:'
+const SCOPE_LABELS: Record<string, string> = {
+  openid: 'Confirmar tu identidad',
+  profile: 'Ver tu nombre',
+  email: 'Ver tu email',
+  offline_access: 'Mantener el acceso sin que vuelvas a iniciar sesión',
+}
+const scopes = String(route.query.scope ?? '').split(' ').filter(Boolean).map((s) => SCOPE_LABELS[s] ?? s)
+
+onMounted(async () => {
+  if (!clientId) return
+  const res = await auth.$fetch<{ client_name?: string }>('/oauth2/public-client', { query: { client_id: clientId } })
+  clientName.value = res.data?.client_name ?? ''
+})
 
 async function decide(accept: boolean) {
-  error.value = ''
-  busy.value = true
-  try {
-    const res = await auth.oauth2.consent({ accept })
-    if (res.error) return void (error.value = res.error.message ?? 'Could not complete the request')
-    const url = (res.data as { url?: string } | null)?.url
-    if (url) window.location.href = url
-  } finally {
-    busy.value = false
-  }
+  await run(async () => {
+    const res = await auth.$fetch<{ redirect?: boolean; url?: string }>('/oauth2/consent', { method: 'POST', body: { accept } })
+    if (res.error) throw res.error
+    // The API answers `{ redirect: true, url }` with the agent's registered callback (code or
+    // access_denied); the auth client follows it.
+    if (!res.data?.redirect || !res.data.url) throw new Error('Missing redirect')
+  })
 }
 </script>
 
 <template>
-  <main class="min-h-screen bg-background text-foreground flex items-center justify-center p-8">
-    <section class="w-full max-w-sm flex flex-col gap-4">
-      <h1 class="text-2xl font-bold tracking-tight">Authorize access</h1>
+  <div class="space-y-6">
+    <header class="space-y-2">
+      <h1 class="text-2xl font-bold tracking-tight">Autorizar acceso</h1>
       <p class="text-sm text-muted-foreground">
-        The application <strong class="text-foreground">{{ clientId || 'unknown' }}</strong> wants to access your account with:
+        <strong class="text-foreground break-words">{{ clientName || clientId || 'Una aplicación' }}</strong>
+        <Badge v-if="!verified" variant="outline" class="ml-1 align-middle">No verificado</Badge>
+        quiere acceder a tu negocio en CitasSaaS en tu nombre.
       </p>
-      <ul class="list-disc pl-5 text-sm">
+      <p v-if="!verified" class="text-sm text-muted-foreground">CitasSaaS no comprobó quién publica esta aplicación: el nombre lo eligió ella. Permite el acceso solo si la reconoces.</p>
+      <p v-if="redirectHost" class="text-sm text-muted-foreground">
+        Te devolverá a <strong class="text-foreground break-all">{{ redirectHost }}</strong>.
+      </p>
+    </header>
+    <section v-if="scopes.length" aria-labelledby="consent-scopes" class="space-y-2">
+      <h2 id="consent-scopes" class="text-sm font-medium">Podrá:</h2>
+      <ul class="list-disc space-y-1 pl-5 text-sm">
         <li v-for="scope in scopes" :key="scope">{{ scope }}</li>
       </ul>
-      <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }}</p>
-      <div class="flex gap-3">
-        <Button :disabled="busy" @click="decide(true)">Allow</Button>
-        <Button variant="outline" :disabled="busy" @click="decide(false)">Deny</Button>
-      </div>
     </section>
-  </main>
+    <AuthMessage v-if="error" error>{{ error }}</AuthMessage>
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <Button type="button" class="w-full gap-2" :disabled="pending" @click="decide(true)">
+        <LoaderCircle v-if="pending" class="h-4 w-4 animate-spin" aria-hidden="true" />
+        Permitir
+      </Button>
+      <Button type="button" variant="outline" class="w-full" :disabled="pending" @click="decide(false)">Rechazar</Button>
+    </div>
+  </div>
 </template>

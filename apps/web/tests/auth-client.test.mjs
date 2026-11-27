@@ -59,3 +59,28 @@ test('email and password validation matches documented default policy', () => {
   assert.equal(passwordError('x'.repeat(128)), '')
   assert.ok(passwordError('x'.repeat(129)))
 })
+
+// What the API appends to /login and /consent during an agent's OAuth authorization (signed, with its parameter list).
+const SIGNED = '?client_id=agent&scope=openid&ba_param=ba_param&ba_param=client_id&ba_param=scope&sig=signature'
+
+async function postFrom(t, search) {
+  const bodies = []
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    bodies.push(JSON.parse(options.body ?? '{}'))
+    return Response.json({ redirect: false })
+  })
+  globalThis.window = { location: { search } }
+  t.after(() => { delete globalThis.window })
+  await createWebAuthClient('http://localhost:3001').signIn.email({ email: 'a@b.co', password: 'password1234' })
+  return bodies[0]
+}
+
+test('during an OAuth authorization, auth calls carry the signed query so the API resumes it', async (t) => {
+  const body = await postFrom(t, SIGNED)
+  assert.equal(new URLSearchParams(body.oauth_query).get('sig'), 'signature')
+  assert.equal(new URLSearchParams(body.oauth_query).get('client_id'), 'agent')
+})
+
+test('outside an OAuth authorization, auth calls carry no OAuth query', async (t) => {
+  assert.equal((await postFrom(t, '?next=/admin')).oauth_query, undefined)
+})

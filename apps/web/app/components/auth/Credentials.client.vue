@@ -47,6 +47,9 @@ async function submit() {
         return
       }
     }
+    // During an agent's OAuth authorization the API answers `{ redirect: true, url }` (consent, or the
+    // agent itself when consent was already given) and the auth client is already navigating there.
+    if (!props.register && (result.data as { redirect?: boolean } | null)?.redirect) return
     await navigateTo('/auth/complete')
   })
 }

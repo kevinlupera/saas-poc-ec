@@ -30,11 +30,14 @@ defineRouteMeta({
   },
 })
 
-import { requireAccess } from '../../../utils/principal'
+import { tenantMe } from '../../../utils/endpoints'
+import { asHttp, requirePrincipal } from '../../../utils/principal'
 
-/** Who am I in this tenant? Reference route showing the tenant check every tenant route must do. */
+/** Who am I in this tenant? Reference route: authenticate, then the shared logic authorizes. */
 export default defineEventHandler(async (event) => {
   const tenantId = getRouterParam(event, 'tenantId') ?? ''
-  const principal = await requireAccess(event, useRuntimeConfig(event), 'agenda:own', tenantId)
-  return { tenantId, kind: principal.kind, role: principal.role, scopes: principal.scopes }
+  // Logged even when access is denied, so cross-tenant attempts are visible.
+  event.context.tenantId = tenantId
+  const principal = await requirePrincipal(event, useRuntimeConfig(event))
+  return asHttp(() => tenantMe(principal, tenantId))
 })

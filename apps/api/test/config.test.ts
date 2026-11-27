@@ -7,7 +7,7 @@ const base = {
   databaseUrl: 'postgres://u:p@localhost:5433/db',
   authBaseUrl: 'http://localhost:3001',
   webOrigin: 'http://localhost:3000',
-  mcpResource: 'http://localhost:3002/mcp',
+  mcpResource: 'http://localhost:3001/mcp',
   resendApiKey: '',
   emailFrom: '',
   smtpHost: 'localhost',
@@ -60,4 +60,20 @@ test('Google is enabled with both credentials, disabled with neither', () => {
 test('only one Google credential fails, naming the missing key', () => {
   failsWith({ ...base, googleClientId: 'id' }, dev, ['googleClientSecret'])
   failsWith({ ...base, googleClientSecret: 'gsecret' }, dev, ['googleClientId'], 'gsecret')
+})
+
+test('the MCP resource is served by the API itself (same origin)', () => {
+  assert.equal(parseConfig(base, dev).mcpResource, 'http://localhost:3001/mcp')
+  failsWith({ ...base, mcpResource: 'http://localhost:3002/mcp' }, dev, ['mcpResource'])
+  failsWith({ ...base, mcpResource: 'http://localhost:3001/other' }, dev, ['mcpResource'])
+})
+
+test('open client registration (NITRO_OAUTH_DCR_ENABLED): on outside production, off in production unless set', () => {
+  const withProd = { ...base, resendApiKey: 're_x', emailFrom: 'a@b.co' }
+  assert.equal(parseConfig({ ...base, oauthDcrEnabled: '' }, dev).oauthDcrEnabled, true)
+  assert.equal(parseConfig(base, dev).oauthDcrEnabled, true)
+  assert.equal(parseConfig(withProd, prod).oauthDcrEnabled, false)
+  assert.equal(parseConfig({ ...withProd, oauthDcrEnabled: true }, prod).oauthDcrEnabled, true)
+  assert.equal(parseConfig({ ...base, oauthDcrEnabled: 'false' }, dev).oauthDcrEnabled, false)
+  failsWith({ ...base, oauthDcrEnabled: 'yes' }, dev, ['oauthDcrEnabled'])
 })

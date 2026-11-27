@@ -1,6 +1,6 @@
 import { logRequestOnce } from '../utils/request-log'
 
-// Structured access log. `tenantId` / principal are put on `event.context` by requireAccess.
+// Structured access log. `tenantId` / principal are put on `event.context` by requirePrincipal/requireAccess and routes/mcp.ts.
 export default defineNitroPlugin((nitroApp) => {
   nitroApp.hooks.hook('request', (event) => {
     event.context.startedAt = Date.now()

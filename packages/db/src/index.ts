@@ -35,3 +35,4 @@ export async function findFirstTenantId(db: Db, userId: string): Promise<string 
 
 export { withTenant, type Tx } from './tenant.ts'
 export { tenantRlsSql } from './rls.ts'
+export { deleteUnusedDynamicClients } from './oauth-clients.ts'

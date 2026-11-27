@@ -14,3 +14,10 @@ test('rejects unknown documents and foreign issuer paths', () => {
   assert.equal(discoveryTarget('nope'), null)
   assert.equal(discoveryTarget('oauth-authorization-server/other/tenant'), null)
 })
+
+test('protected resource metadata (RFC 9728) is passed through at the root path the MCP plugin serves', () => {
+  assert.equal(discoveryTarget('oauth-protected-resource'), '/.well-known/oauth-protected-resource')
+  assert.equal(discoveryTarget('oauth-protected-resource/mcp'), '/.well-known/oauth-protected-resource/mcp')
+  assert.equal(discoveryTarget('oauth-protected-resource/other'), null)
+  assert.equal(discoveryTarget('oauth-protected-resource/api/auth'), null)
+})

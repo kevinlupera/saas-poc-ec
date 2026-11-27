@@ -36,7 +36,7 @@ jobs:
       NITRO_AUTH_SECRET: ci-throwaway-auth-secret-32chars
       NITRO_AUTH_BASE_URL: http://localhost:3001
       NITRO_WEB_ORIGIN: http://localhost:3000
-      NITRO_MCP_RESOURCE: http://localhost:3002/mcp
+      NITRO_MCP_RESOURCE: http://localhost:3001/mcp
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -61,3 +61,4 @@ jobs:
           exit 1
       - run: pnpm e2e:auth
       - run: pnpm e2e:tenant
+      - run: pnpm e2e:oauth

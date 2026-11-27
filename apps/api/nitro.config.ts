@@ -13,12 +13,12 @@ export default defineNitroConfig({
   runtimeConfig: {
     // Origin allowed by CORS. Override with NITRO_WEB_ORIGIN.
     webOrigin: 'http://localhost:3000',
-    // Auth. Override with NITRO_AUTH_SECRET, NITRO_DATABASE_URL, NITRO_AUTH_BASE_URL, NITRO_MCP_RESOURCE.
+    // Auth. Override with NITRO_AUTH_SECRET, NITRO_DATABASE_URL, NITRO_AUTH_BASE_URL, NITRO_MCP_RESOURCE (`<API origin>/mcp`).
     authSecret: '',
     // Runtime role `saas_app` (no BYPASSRLS), never the owner. Migrations use DATABASE_URL (owner).
     databaseUrl: 'postgres://saas_app:saas_app@localhost:5433/saas',
     authBaseUrl: 'http://localhost:3001',
-    mcpResource: 'http://localhost:3002/mcp',
+    mcpResource: 'http://localhost:3001/mcp',
     // Email: NITRO_RESEND_API_KEY + NITRO_EMAIL_FROM (required in production). Without a Resend key,
     // non-production sends over SMTP to Mailpit (NITRO_SMTP_HOST, NITRO_SMTP_PORT).
     resendApiKey: '',
@@ -28,5 +28,8 @@ export default defineNitroConfig({
     // Google sign-in: NITRO_GOOGLE_CLIENT_ID + NITRO_GOOGLE_CLIENT_SECRET, both or neither (disabled).
     googleClientId: '',
     googleClientSecret: '',
+    // Open OAuth dynamic client registration (MCP clients register themselves): NITRO_OAUTH_DCR_ENABLED.
+    // Unset = on outside production, off in production.
+    oauthDcrEnabled: '',
   },
 })

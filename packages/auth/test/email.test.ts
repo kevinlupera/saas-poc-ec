@@ -52,7 +52,7 @@ async function authHooks() {
     baseURL: 'http://localhost:3001',
     trustedOrigins: ['http://localhost:3000'],
     webOrigin: 'http://localhost:3000',
-    mcpResource: 'http://localhost:3002/mcp',
+    mcpResource: 'http://localhost:3001/mcp',
     sendEmail: async (message) => { await gate; sent.push(message.subject) },
   })
   return { options: auth.options, sent, release }

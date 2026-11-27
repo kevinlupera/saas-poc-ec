@@ -21,6 +21,15 @@ export async function requirePrincipal(event: H3Event, rawConfig: unknown) {
   }
 }
 
+/** Runs endpoint logic and maps core errors to HTTP (401/403). */
+export function asHttp<T>(run: () => T): T {
+  try {
+    return run()
+  } catch (e) {
+    return toHttp(e)
+  }
+}
+
 /** Authorize an already authenticated principal for `action` inside `tenantId`, or answer 403. */
 export function assertAllowed(rawConfig: unknown, principal: Principal, action: Action, tenantId: string) {
   try {

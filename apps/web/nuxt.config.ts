@@ -20,12 +20,11 @@ export default defineNuxtConfig({
   build: { transpile: ['@saas/shared'] },
   nitro: {
     prerender: {
-      routes: ['/login', '/registro', '/recuperar-contrasena', '/restablecer-contrasena', '/verificar-email', '/auth/complete'],
+      routes: ['/login', '/registro', '/recuperar-contrasena', '/restablecer-contrasena', '/verificar-email', '/auth/complete', '/consent'],
     },
   },
   // Auth pages depend on the browser URL/session: render client-side only.
   routeRules: {
-    '/sign-in': { ssr: false },
     '/consent': { ssr: false },
   },
   runtimeConfig: {

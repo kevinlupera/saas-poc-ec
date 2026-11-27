@@ -6,13 +6,13 @@ import tseslint from 'typescript-eslint'
 export default defineConfig(
   { ignores: ['**/node_modules/**', '**/.nitro/**', '**/.output/**', '**/dist/**', '**/.nuxt/**'] },
   {
-    files: ['{packages/core,packages/auth,packages/db,packages/shared,apps/api,apps/mcp}/**/*.ts'],
+    files: ['{packages/core,packages/auth,packages/db,packages/shared,apps/api}/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
         // Tests and configs that no tsconfig includes are checked with the auth package's compiler options.
         projectService: {
-          allowDefaultProject: ['packages/{auth,db}/test/*.ts', 'apps/mcp/test/*.ts', 'packages/db/drizzle.config.ts', 'packages/shared/src/*.ts'],
+          allowDefaultProject: ['packages/{auth,db}/test/*.ts', 'packages/db/drizzle.config.ts', 'packages/shared/src/*.ts'],
           defaultProject: 'packages/auth/tsconfig.json',
           // ponytail: one shared program for these files; give them their own tsconfig if linting gets slow.
           maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 64,

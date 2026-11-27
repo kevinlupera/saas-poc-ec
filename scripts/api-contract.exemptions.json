@@ -1,14 +1,6 @@
 [
   {
-    "route": "GET /api/me",
-    "reason": "Pending: MCP-to-API delegation model is undecided (token passthrough is forbidden by the MCP spec). See AGENTS.md."
-  },
-  {
-    "route": "GET /api/tenants/{tenantId}/me",
-    "reason": "Pending: MCP-to-API delegation model is undecided (token passthrough is forbidden by the MCP spec). See AGENTS.md."
-  },
-  {
     "route": "POST /api/tenants/{tenantId}/api-keys",
-    "reason": "Pending: delegation model undecided, and minting credentials from an agent needs an explicit human-confirmation design. See AGENTS.md."
+    "reason": "Pending: minting credentials from an agent needs an explicit human-confirmation design. See AGENTS.md."
   }
 ]
