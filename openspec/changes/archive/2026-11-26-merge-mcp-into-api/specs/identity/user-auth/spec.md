@@ -36,6 +36,10 @@ El frontend SHALL mostrar una pantalla de consentimiento en español, con el mis
 - **WHEN** la persona acepta el acceso del agente
 - **THEN** la API registra el consentimiento para el negocio activo y el navegador vuelve a la aplicación del agente con el código de autorización.
 
+#### Scenario: Unverified client
+- **WHEN** la aplicación solicitante no se identifica con un documento de metadatos https (CIMD), por ejemplo un cliente registrado dinámicamente
+- **THEN** la pantalla la marca como "No verificado", advierte que no se pudo comprobar quién la publica y muestra el dominio al que volverá el navegador
+
 #### Scenario: Deny access
 - **WHEN** la persona rechaza el acceso
 - **THEN** no se emite ningún código y el navegador vuelve a la aplicación del agente con un error de acceso denegado.

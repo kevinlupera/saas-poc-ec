@@ -11,6 +11,11 @@ const route = useRoute()
 const { pending, error, run } = useAuthAction()
 const clientId = String(route.query.client_id ?? '')
 const clientName = ref('')
+// Where the authorization code goes: the user should recognise it.
+const redirectHost = URL.canParse(String(route.query.redirect_uri ?? '')) ? new URL(String(route.query.redirect_uri)).host : ''
+// Only a CIMD client (its id is the https URL of its metadata) proves who runs it; any other
+// client (self-registered or created by hand) names itself.
+const verified = URL.canParse(clientId) && new URL(clientId).protocol === 'https:'
 const SCOPE_LABELS: Record<string, string> = {
   openid: 'Confirmar tu identidad',
   profile: 'Ver tu nombre',
@@ -42,7 +47,12 @@ async function decide(accept: boolean) {
       <h1 class="text-2xl font-bold tracking-tight">Autorizar acceso</h1>
       <p class="text-sm text-muted-foreground">
         <strong class="text-foreground break-words">{{ clientName || clientId || 'Una aplicación' }}</strong>
+        <Badge v-if="!verified" variant="outline" class="ml-1 align-middle">No verificado</Badge>
         quiere acceder a tu negocio en CitasSaaS en tu nombre.
+      </p>
+      <p v-if="!verified" class="text-sm text-muted-foreground">CitasSaaS no comprobó quién publica esta aplicación: el nombre lo eligió ella. Permite el acceso solo si la reconoces.</p>
+      <p v-if="redirectHost" class="text-sm text-muted-foreground">
+        Te devolverá a <strong class="text-foreground break-all">{{ redirectHost }}</strong>.
       </p>
     </header>
     <section v-if="scopes.length" aria-labelledby="consent-scopes" class="space-y-2">

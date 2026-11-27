@@ -38,7 +38,9 @@
 - [x] 7.3 Set `loginPage: ${webOrigin}/login` in `packages/auth/src/auth.ts`. Verify: `curl -i` of `/api/auth/oauth2/authorize?...` without a session redirects to `<web>/login?...&sig=...`
 - [x] 7.4 Extend `apps/web/tests/e2e/auth.spec.ts`: on `/login?<signed query>` email sign-in posts `oauth_query` and navigates to the returned consent URL; Google sign-in posts `oauth_query` to `sign-in/social`; consent already given goes straight back to the agent; plain `/login` still ends at `/auth/complete` (existing tests); `/consent` direct load works; consent accept/deny follow the returned URL. Verify: `pnpm --filter @saas/web test:e2e` passes
 - [x] 7.6 Dev only: open dynamic client registration (no session, http loopback callbacks) so MCP Inspector and Claude Code register themselves; production keeps CIMD and pre-registered clients. Verify: `pnpm e2e:oauth` checks `registration_endpoint` and a registration without session
-- [ ] 7.5 Manual check with Google configured (`NITRO_GOOGLE_CLIENT_ID/SECRET`): start the OAuth flow from MCP Inspector, sign in with Google, land on `/consent`, accept, and get a token. Verify: record the result in the PR description
+- [x] 7.5 Manual check with Google configured (`NITRO_GOOGLE_CLIENT_ID/SECRET`): start the OAuth flow from MCP Inspector, sign in with Google, land on `/consent`, accept, and get a token. Verify: record the result in the PR description
+  - Result (2026-11-26, local, API :3011, web :3010): MCP Inspector registered itself via DCR (no manual Client ID), Google sign-in landed on `/consent`, accepting returned a token and the MCP session connected. `tenant_me` returned `Forbidden`, as expected (see next note, issue #59).
+  - Note: a freshly signed-up user has no organization (no onboarding yet), so the token has no `tenant_id` and `tenant_me` returns `Forbidden`. That is expected today, not a failure of this change; create an organization first to check `tenant_me`.
 
 ## 8. Integration
 

@@ -1,10 +1,10 @@
-# Spec Delta
+# agents/mcp-server Specification
 
 ## Purpose
 
 Defines the MCP endpoint that third-party AI agents use to call the platform: where it is served, how OAuth protects it, how a tool acts for the consenting user inside one tenant, and how the tool catalogue stays in step with the HTTP API.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: MCP endpoint on the API origin
 The API SHALL serve the MCP endpoint at `POST <API origin>/mcp` using Streamable HTTP in stateless mode with JSON responses. The canonical MCP resource URL SHALL be that endpoint URL, and no other host SHALL serve MCP.
@@ -42,6 +42,21 @@ The API SHALL publish RFC 9728 protected-resource metadata for the MCP resource 
 #### Scenario: Other resource path
 - **WHEN** a client requests `/.well-known/oauth-protected-resource/other`
 - **THEN** the API responds 404
+
+### Requirement: Client self-registration
+MCP clients SHALL be able to register without a manual client id through Client ID Metadata Documents, and, when open dynamic registration (RFC 7591) is enabled, through the published `registration_endpoint`. Open registration SHALL be on by default outside production and off in production. A registration SHALL be rejected when it carries unknown metadata, opts out of PKCE, has a name over 100 characters, more than 5 redirect URIs, a redirect URI other than https or http on a loopback host, a wildcard, or a non-https display URL. Registrations SHALL be limited to 10 per client IP per hour and each one SHALL be logged. Authorization SHALL require PKCE with S256. Discovery, registration, token, revocation and key endpoints SHALL allow cross-origin requests from any origin without credentials.
+
+#### Scenario: Browser client registers itself
+- **WHEN** a browser-based MCP client (such as MCP Inspector) on another origin discovers the authorization server and posts a registration with a loopback http redirect URI
+- **THEN** the API returns a client id and the client can complete authorization code with PKCE S256 and call `/mcp`
+
+#### Scenario: Unsafe registration
+- **WHEN** a registration asks for a remote http redirect URI, `require_pkce: false` or a scope outside the allowed list
+- **THEN** the API rejects it with an RFC 7591 error and no client is created
+
+#### Scenario: Too many registrations
+- **WHEN** one IP sends an 11th registration within an hour
+- **THEN** the API responds 429
 
 ### Requirement: Tools act for the consenting user in the token tenant
 A tool SHALL act as an agent for the token subject inside the token's `tenant_id`, with that user's current role in that tenant. Every tenant action SHALL be authorized against current membership when the tool runs, and failures SHALL return the same tool error for wrong tenant, missing tenant claim, lost membership and missing permission.

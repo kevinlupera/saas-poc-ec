@@ -479,6 +479,24 @@ for (const accept of [true, false]) {
   })
 }
 
+test('OAuth consent: a self-registered client is marked unverified and shows where it sends the user', async ({ page }) => {
+  await api(page)
+  await page.route('**/api/auth/oauth2/public-client**', route => json(route, { client_name: 'Claude Code' }))
+  await page.goto(`/consent?client_id=dcr123&redirect_uri=${encodeURIComponent('http://localhost:53682/callback')}&scope=openid&sig=signature`)
+  await expect(page.getByText('Claude Code', { exact: true })).toBeVisible()
+  await expect(page.getByText('No verificado', { exact: true })).toBeVisible()
+  await expect(page.getByText('localhost:53682', { exact: true })).toBeVisible()
+})
+
+test('OAuth consent: a CIMD client (https client_id) is not marked unverified', async ({ page }) => {
+  await api(page)
+  await page.route('**/api/auth/oauth2/public-client**', route => json(route, { client_name: 'Claude' }))
+  await page.goto(`/consent?client_id=${encodeURIComponent('https://claude.ai/oauth/mcp-client-metadata')}&redirect_uri=${encodeURIComponent('https://claude.ai/api/mcp/auth_callback')}&scope=openid&sig=signature`)
+  await expect(page.getByText('Claude', { exact: true })).toBeVisible()
+  await expect(page.getByText('claude.ai', { exact: true })).toBeVisible()
+  await expect(page.getByText('No verificado', { exact: true })).toHaveCount(0)
+})
+
 test('OAuth consent: a rejected request shows a safe error and stays usable', async ({ page }) => {
   await api(page)
   await page.route('**/api/auth/oauth2/consent', route => json(route, { error: 'invalid_signature', message: '<b>internal-secret</b>' }, 400))
