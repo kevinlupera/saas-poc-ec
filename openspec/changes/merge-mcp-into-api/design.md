@@ -59,6 +59,9 @@ See proposal.md (Why) for motivation and the OAuth research. Current state that 
    Registration inside the flow does not resume (sign-up gives no session until verification); after verifying, the user restarts from the agent. Accepted to keep the flow simple.
    *Alternative:* keep `/sign-in` and add Google to it. Rejected: two login screens with diverging rules.
 
+8. **Open client registration in development only** (added during apply). Clients are pre-registered or use CIMD, which needs a public https metadata URL, so a local MCP Inspector or Claude Code could not connect ("does not support dynamic client registration"). Outside production the API enables RFC 7591 registration without a session and accepts http loopback callbacks for web clients (`openClientRegistration`, set by `container.ts` from `NODE_ENV`). Production is unchanged.
+   *Alternative:* register the Inspector by hand with `create-client`. Rejected for daily use: every local client and port needs a manual step.
+
 ## Risks / Trade-offs
 
 - [Shared Lambda: an MCP bug or load spike affects the HTTP API] → MCP is stateless and low traffic now; splitting later only means deploying the same app twice with different route sets, since the code no longer depends on being separate.

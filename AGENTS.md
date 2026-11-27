@@ -54,6 +54,7 @@ Nitro notes (we run `nitropack` 2.x; nitro.build docs describe v3):
 - Config reaches utils as `unknown` and is validated with zod (`parseConfig`); never log config values.
 
 MCP delegation model: tools run **in-process** in `apps/api`. `POST /mcp` verifies the bearer token with `requireMcpAuth` (audience `NITRO_MCP_RESOURCE`, which must be `<API origin>/mcp`); the tool context builds an `agent` principal from the claims (`sub`, `tenant_id`) plus the user's **current** role (`mcpPrincipal` in `packages/auth`), then runs the endpoint function, which authorizes like the route. Never forward the received token to anything (token passthrough is forbidden by the MCP spec). Map denials with `guarded(...)` so every one reads the same `Forbidden`.
+Client registration: open dynamic registration (no session, http loopback callbacks) only outside production (`openClientRegistration` in `container.ts`), so local clients like MCP Inspector connect; production keeps CIMD and pre-registered clients. Never enable it in production.
 
 ## Multi-tenancy (`tenantId` = Better Auth organization id)
 

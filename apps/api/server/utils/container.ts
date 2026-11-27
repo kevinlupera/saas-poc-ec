@@ -65,6 +65,8 @@ function build(rawConfig: unknown) {
     webOrigin: cfg.webOrigin,
     mcpResource: cfg.mcpResource,
     google: cfg.google,
+    // Never in production: anyone could register clients there.
+    openClientRegistration: process.env.NODE_ENV !== 'production',
     sendEmail: cfg.mail.kind === 'resend' ? resendSender(cfg.mail) : smtpSender(cfg.mail),
   })
   return {

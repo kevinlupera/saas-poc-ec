@@ -62,4 +62,9 @@ expect "me: agent for the user" agent "$(call me '{}' | json "d['result']['struc
 
 echo "--- consent screen can show the client name"
 expect "client name" e2e "$(curl -s -m 30 "$B/api/auth/oauth2/public-client?client_id=$CID" -H "cookie: $C" | json "d.get('client_name')")"
+
+echo "--- dev: local MCP clients (web, http://localhost callback) register themselves (RFC 7591, no session)"
+expect "AS metadata has registration_endpoint" True "$(curl -s -m 30 $B/.well-known/oauth-authorization-server/api/auth | json "'registration_endpoint' in d")"
+DCR='{"client_name":"dcr","redirect_uris":["http://localhost:6274/oauth/callback"],"token_endpoint_auth_method":"none","grant_types":["authorization_code"],"response_types":["code"]}'
+expect "open registration gives a client_id" True "$(curl -s -m 30 -X POST $B/api/auth/oauth2/register -H "$J" -d "$DCR" | json "bool(d.get('client_id'))")"
 exit $FAIL

@@ -30,7 +30,15 @@ export interface AuthConfig {
   sendEmail: SendEmail
   /** Google sign-in; omitted = disabled. Server-only credentials. */
   google?: { clientId: string; clientSecret: string }
+  /**
+   * Open dynamic client registration (RFC 7591, no session), so local MCP clients such as MCP
+   * Inspector or Claude Code register themselves, with http loopback callbacks. Development only:
+   * production keeps CIMD and pre-registered clients.
+   */
+  openClientRegistration?: boolean
 }
+
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]'])
 
 const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -151,6 +159,10 @@ export function createAuth(config: AuthConfig) {
         loginPage: `${config.webOrigin}/login`,
         consentPage: `${config.webOrigin}/consent`,
         resource: config.mcpResource,
+        allowDynamicClientRegistration: config.openClientRegistration ?? false,
+        allowUnauthenticatedClientRegistration: config.openClientRegistration ?? false,
+        // Local clients register as web clients with an http://localhost callback (e.g. MCP Inspector).
+        allowInsecureRedirectUri: config.openClientRegistration ? (url) => LOOPBACK.has(url.hostname) : undefined,
         // The consent is tied to the session's active tenant, so tokens say which tenant they act in.
         // No picker yet (shouldRedirect: false): a user in several tenants authorizes the active one.
         postLogin: {
