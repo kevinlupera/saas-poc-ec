@@ -28,5 +28,8 @@ export default defineNitroConfig({
     // Google sign-in: NITRO_GOOGLE_CLIENT_ID + NITRO_GOOGLE_CLIENT_SECRET, both or neither (disabled).
     googleClientId: '',
     googleClientSecret: '',
+    // Open OAuth dynamic client registration (MCP clients register themselves): NITRO_OAUTH_DCR_ENABLED.
+    // Unset = on outside production, off in production.
+    oauthDcrEnabled: '',
   },
 })

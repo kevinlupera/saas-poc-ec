@@ -98,7 +98,7 @@ Tools never forward the token. Each request gets an `agent` principal from the v
 2. Add `apps/api/server/mcp/tools/<name>.ts` following `tenant-me.ts`: `export const route = 'METHOD /api/...'`, zod input/output, `annotations.readOnlyHint` if it changes nothing, body wrapped in `guarded(...)`.
 3. Register it in `apps/api/server/mcp/server.ts` and cover it in `apps/api/test/mcp-tools.test.ts`.
 
-Test with `pnpm mcp:inspect` (it runs the OAuth flow) or `pnpm e2e:oauth`. Outside production local clients register themselves (open dynamic client registration, http loopback callbacks); production only accepts CIMD and pre-registered clients.
+Test with `pnpm mcp:inspect` (it runs the OAuth flow) or `pnpm e2e:oauth`. MCP clients register themselves (dynamic client registration, `NITRO_OAUTH_DCR_ENABLED`, on by default outside production); production accepts CIMD and pre-registered clients unless you turn it on. Rules and limits: AGENTS.md.
 
 ## Environment variables
 

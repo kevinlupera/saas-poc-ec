@@ -29,6 +29,7 @@ pnpm e2e:tenant       # tenant isolation over HTTP (api + Postgres + Mailpit run
 pnpm e2e:oauth        # OAuth authorize -> consent -> token -> /mcp on the API (api + Postgres + Mailpit running)
 # e2e overrides when ports clash: API_BASE (must match NITRO_AUTH_BASE_URL), WEB_ORIGIN, MAILPIT, MCP_RESOURCE
 APP_DB_PASSWORD=saas_app pnpm --filter @saas/db db:app-role   # runtime DB role (after db:migrate)
+pnpm --filter @saas/db db:cleanup-dcr   # delete dynamically registered OAuth clients unused for 30 days (run periodically)
 ```
 
 Git hooks (lefthook, `lefthook.yml`, installed by `pnpm install`): pre-commit runs `check:boundaries` and `check:api` on backend changes; commit-msg enforces Conventional Commits and rejects Co-Authored-By/AI attribution lines; pre-push runs `pnpm check` and `pnpm test`. Skip once with `LEFTHOOK=0` only if you must; never weaken the hooks to make a commit pass.
@@ -54,7 +55,7 @@ Nitro notes (we run `nitropack` 2.x; nitro.build docs describe v3):
 - Config reaches utils as `unknown` and is validated with zod (`parseConfig`); never log config values.
 
 MCP delegation model: tools run **in-process** in `apps/api`. `POST /mcp` verifies the bearer token with `requireMcpAuth` (audience `NITRO_MCP_RESOURCE`, which must be `<API origin>/mcp`); the tool context builds an `agent` principal from the claims (`sub`, `tenant_id`) plus the user's **current** role (`mcpPrincipal` in `packages/auth`), then runs the endpoint function, which authorizes like the route. Never forward the received token to anything (token passthrough is forbidden by the MCP spec). Map denials with `guarded(...)` so every one reads the same `Forbidden`.
-Client registration: open dynamic registration (no session, http loopback callbacks) only outside production (`openClientRegistration` in `container.ts`), so local clients like MCP Inspector connect; production keeps CIMD and pre-registered clients. Never enable it in production.
+OAuth client registration: CIMD and pre-registered clients always; open dynamic registration (RFC 7591, no session) when `NITRO_OAUTH_DCR_ENABLED` is on (default: on outside production, off in production). On top of Better Auth's checks, `registrationProblem` (`packages/auth/src/adapters/client-registration.ts`) rejects unknown metadata, opting out of PKCE, names over 100 chars, more than 5 redirect URIs, redirect URIs other than https or http loopback, wildcards and non-https display URLs. Registration is limited to 10 per IP per hour; Better Auth's limiter runs in every environment with counters in Postgres (`rate_limit`), and only the sign-in / sign-up / email limits are relaxed outside production. OAuth discovery (`/.well-known/*`), `oauth2/register`, `oauth2/token`, `oauth2/revoke` and `jwks` allow CORS from any origin without credentials (browser clients such as MCP Inspector); every other route only allows the web origin. `/consent` marks every client except CIMD as "No verificado". Clean up unused registrations with `pnpm --filter @saas/db db:cleanup-dcr` (30 days, never consented). Before turning DCR on in production, set `advanced.ipAddress` to a header the edge sets: `x-forwarded-for` can be spoofed by the client.
 
 ## Multi-tenancy (`tenantId` = Better Auth organization id)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OAuth + MCP smoke test: authorize -> consent -> token -> POST /mcp on the API. Needs apps/api (:3001 or API_BASE,
+# OAuth + MCP smoke test: dynamic registration -> authorize -> consent -> token -> POST /mcp on the API. Needs apps/api (:3001 or API_BASE,
 # NITRO_AUTH_SECRET set, NITRO_MCP_RESOURCE = $API_BASE/mcp), migrated Postgres and Mailpit (docker compose up -d).
 # Exits non-zero if any expectation fails.
 set -u
@@ -15,7 +15,13 @@ mcp_code(){ curl -s -m 30 -o /dev/null -w '%{http_code}' -X POST "$RES" -H "$J" 
 
 C=$(verified_signup "p$S@t.co")
 ORG=$(curl -s -m 30 -X POST $B/api/auth/organization/create -H "$J" -H "$O" -H "cookie: $C" -d "{\"name\":\"p\",\"slug\":\"p$S\"}" | json "d['id']")
-CID=$(curl -s -m 30 -X POST $B/api/auth/oauth2/create-client -H "$J" -H "$O" -H "cookie: $C" -d "{\"client_name\":\"e2e\",\"application_type\":\"native\",\"redirect_uris\":[\"$RED\"],\"token_endpoint_auth_method\":\"none\",\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"scope\":\"openid profile email offline_access\"}" | json "d.get('client_id') or d")
+# The client registers itself (RFC 7591, no session), as MCP Inspector and Claude Code do. Each run
+# uses its own client IP so Better Auth's per-IP registration limit never carries over between runs.
+ip(){ echo "10.$((RANDOM%250)).$((RANDOM%250)).$((RANDOM%250))"; }
+IP=$(ip)
+reg(){ curl -s -m 30 -X POST $B/api/auth/oauth2/register -H "$J" -H "x-forwarded-for: ${2:-$IP}" -d "$1"; }
+CLIENT='{"client_name":"e2e","redirect_uris":["http://127.0.0.1:8123/cb"],"token_endpoint_auth_method":"none","grant_types":["authorization_code","refresh_token"],"response_types":["code"],"scope":"openid profile email offline_access"}'
+CID=$(reg "$CLIENT" | json "d.get('client_id') or d")
 echo "client: $CID"
 [ -n "$C" ] && [ -n "$ORG" ] && [[ "$CID" =~ ^[A-Za-z0-9_-]{16,}$ ]] || { echo "FAIL setup (sign-up/org/client)"; exit 1; }
 
@@ -24,6 +30,7 @@ URL="$B/api/auth/oauth2/authorize?response_type=code&client_id=$CID&redirect_uri
 LOC=$(curl -s -m 30 -i "$URL" -H "cookie: $C" | grep -i '^location:' | sed 's/^[Ll]ocation: //' | tr -d '\r')
 echo "authorize (signed in) -> $(echo "$LOC" | cut -c1-100)"
 Q=${LOC#*\?}
+expect "consent URL names the redirect (the consent screen shows its host)" "$RED" "$(python3 -c "import sys,urllib.parse as u;print(u.parse_qs(sys.argv[1]).get('redirect_uri',[''])[0])" "$Q")"
 ANON=$(curl -s -m 30 -i "$URL" | grep -i '^location:' | sed 's/^[Ll]ocation: //' | tr -d '\r')
 expect "anonymous authorize goes to the web /login with a signed query" "$WEB/login sig" "$(python3 -c "import sys,urllib.parse as u; p=u.urlparse(sys.argv[1]); print(f'{p.scheme}://{p.netloc}{p.path}', 'sig' if 'sig' in u.parse_qs(p.query) else '')" "$ANON")"
 # What /login does (oauthProviderClient): sign in with the signed query; the API answers with the consent URL.
@@ -63,8 +70,30 @@ expect "me: agent for the user" agent "$(call me '{}' | json "d['result']['struc
 echo "--- consent screen can show the client name"
 expect "client name" e2e "$(curl -s -m 30 "$B/api/auth/oauth2/public-client?client_id=$CID" -H "cookie: $C" | json "d.get('client_name')")"
 
-echo "--- dev: local MCP clients (web, http://localhost callback) register themselves (RFC 7591, no session)"
-expect "AS metadata has registration_endpoint" True "$(curl -s -m 30 $B/.well-known/oauth-authorization-server/api/auth | json "'registration_endpoint' in d")"
-DCR='{"client_name":"dcr","redirect_uris":["http://localhost:6274/oauth/callback"],"token_endpoint_auth_method":"none","grant_types":["authorization_code"],"response_types":["code"]}'
-expect "open registration gives a client_id" True "$(curl -s -m 30 -X POST $B/api/auth/oauth2/register -H "$J" -d "$DCR" | json "bool(d.get('client_id'))")"
+echo "--- an MCP token is only for /mcp"
+expect "MCP token on /api/me" 401 "$(curl -s -m 30 -o /dev/null -w '%{http_code}' $B/api/me -H "authorization: Bearer $AT")"
+expect "MCP token on a tenant route" 401 "$(curl -s -m 30 -o /dev/null -w '%{http_code}' $B/api/tenants/$ORG/me -H "authorization: Bearer $AT")"
+
+echo "--- dynamic client registration (on outside production)"
+META=$(curl -s -m 30 $B/.well-known/oauth-authorization-server/api/auth)
+expect "AS metadata: registration_endpoint" "$B/api/auth/oauth2/register" "$(echo "$META" | json "d.get('registration_endpoint')")"
+expect "AS metadata: PKCE S256 only" "['S256']" "$(echo "$META" | json "d.get('code_challenge_methods_supported')")"
+# Browser MCP clients (MCP Inspector) discover and register from their own origin.
+acao(){ curl -s -i -X OPTIONS -H 'Origin: http://localhost:6274' -H 'access-control-request-method: POST' "$B$1" | tr -d '\r' | sed -n 's/^access-control-allow-origin: //Ip'; }
+expect "CORS: AS metadata open to any origin" "*" "$(acao /.well-known/oauth-authorization-server/api/auth)"
+expect "CORS: registration open to any origin" "*" "$(acao /api/auth/oauth2/register)"
+expect "CORS: session routes stay web-only" "" "$(acao /api/me)"
+rejected(){ reg "$1" | json "d.get('error')"; }
+expect "remote http redirect_uri rejected" invalid_redirect_uri "$(rejected '{"client_name":"x","redirect_uris":["http://evil.example/cb"],"token_endpoint_auth_method":"none"}')"
+expect "registration opting out of PKCE rejected" invalid_client_metadata "$(rejected '{"client_name":"x","redirect_uris":["http://127.0.0.1:8123/cb"],"token_endpoint_auth_method":"none","require_pkce":false}')"
+expect "scope outside the allowed list rejected" invalid_scope "$(rejected '{"client_name":"x","redirect_uris":["http://127.0.0.1:8123/cb"],"token_endpoint_auth_method":"none","scope":"openid admin"}')"
+expect "unknown metadata rejected" invalid_client_metadata "$(rejected '{"client_name":"x","redirect_uris":["http://127.0.0.1:8123/cb"],"token_endpoint_auth_method":"none","skip_consent":true}')"
+expect "http logo_uri rejected" invalid_client_metadata "$(rejected '{"client_name":"x","redirect_uris":["http://127.0.0.1:8123/cb"],"token_endpoint_auth_method":"none","logo_uri":"http://evil.example/l.png"}')"
+authz_error(){ curl -s -m 30 -i "$B/api/auth/oauth2/authorize?response_type=code&client_id=$CID&redirect_uri=$(q $RED)&scope=openid&state=s&resource=$(q $RES)$1" -H "cookie: $C" | grep -i '^location:' | tr -d '\r' | python3 -c "import sys,urllib.parse as u;print(u.parse_qs(u.urlparse(sys.stdin.read().split(' ',1)[1].strip()).query).get('error',[''])[0])"; }
+expect "authorize without PKCE rejected" invalid_request "$(authz_error '')"
+expect "authorize with PKCE plain rejected" invalid_request "$(authz_error "&code_challenge=$V&code_challenge_method=plain")"
+LIMIT_IP=$(ip)
+for _ in 1 2 3 4 5 6 7 8 9 10; do reg "$CLIENT" "$LIMIT_IP" > /dev/null; done
+expect "11th registration from one IP within the hour" 429 "$(curl -s -m 30 -o /dev/null -w '%{http_code}' -X POST $B/api/auth/oauth2/register -H "$J" -H "x-forwarded-for: $LIMIT_IP" -d "$CLIENT")"
+expect "another IP still registers" True "$(reg "$CLIENT" "$(ip)" | json "bool(d.get('client_id'))")"
 exit $FAIL

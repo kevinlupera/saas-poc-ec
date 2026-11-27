@@ -8,8 +8,10 @@ import { mcp } from '@better-auth/mcp'
 import { authorizeAction } from '@saas/core'
 import { findFirstTenantId, findMemberRole, type Db } from '@saas/db'
 import { betterAuth } from 'better-auth'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { admin, jwt, openAPI, organization } from 'better-auth/plugins'
 import { agentPrincipal } from './adapters/agent-principal.ts'
+import { registrationProblem } from './adapters/client-registration.ts'
 import type { EmailMessage, SendEmail } from './adapters/email.ts'
 import { consentTenant, tenantClaims } from './adapters/tenant-claim.ts'
 import { createAccessControl } from 'better-auth/plugins/access'
@@ -31,14 +33,22 @@ export interface AuthConfig {
   /** Google sign-in; omitted = disabled. Server-only credentials. */
   google?: { clientId: string; clientSecret: string }
   /**
-   * Open dynamic client registration (RFC 7591, no session), so local MCP clients such as MCP
-   * Inspector or Claude Code register themselves, with http loopback callbacks. Development only:
-   * production keeps CIMD and pre-registered clients.
+   * Open dynamic client registration (RFC 7591, no session) at `/oauth2/register`, so MCP clients
+   * (MCP Inspector, Claude Code) register themselves. Off by default; `container.ts` turns it on
+   * outside production (`NITRO_OAUTH_DCR_ENABLED`). Extra checks: `registrationProblem`.
    */
-  openClientRegistration?: boolean
+  dynamicClientRegistration?: boolean
+  /**
+   * Development: lift Better Auth's sign-in / sign-up / email limits (3 per 10-60 s per IP), which
+   * local e2e runs from one IP exceed. Every other limit, `/oauth2/register` included, stays.
+   */
+  relaxedAuthRateLimits?: boolean
 }
 
-const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]'])
+const RELAXED = { window: 10, max: 100 }
+const RELAXED_RATE_LIMITS = Object.fromEntries(
+  ['/sign-in/*', '/sign-up/*', '/change-password', '/change-email', '/request-password-reset', '/send-verification-email'].map((path) => [path, RELAXED]),
+)
 
 const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -83,6 +93,20 @@ const roles = {
 
 export const API_KEY_CONFIG = 'org-keys'
 
+/** Dynamic registration: our extra checks run before Better Auth's own (RFC 7591 error codes). */
+function rejectInvalidRegistration(body: unknown) {
+  const problem = registrationProblem(body)
+  if (problem) throw new APIError('BAD_REQUEST', { error: problem.error, error_description: problem.description })
+}
+
+/** One structured line per registered client: metadata only, never a client secret. */
+function logRegistration(returned: unknown, headers: Headers | undefined) {
+  const client = returned as { client_id?: string; client_name?: string; redirect_uris?: string[] } | undefined
+  if (!client?.client_id) return
+  const ip = headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  console.log(JSON.stringify({ level: 'info', msg: 'oauth client registered', clientId: client.client_id, clientName: client.client_name, redirectUris: client.redirect_uris, ip }))
+}
+
 export function createAuth(config: AuthConfig) {
   // Awaited: Lambda freezes once the response is sent, so a detached send can be lost.
   // A failed send is logged, not thrown, so the response never reveals whether mail went out.
@@ -115,6 +139,20 @@ export function createAuth(config: AuthConfig) {
       // Security rule (Better Auth default, pinned): Google never links to an account whose email is unverified,
       // so whoever pre-registered an address cannot share the real owner's account. Verified accounts link.
       accountLinking: { requireLocalEmailVerified: true },
+    },
+    // Better Auth's limiter, on in every environment, with counters in Postgres (`rate_limit`):
+    // in-memory counters would be per Lambda instance.
+    rateLimit: { enabled: true, storage: 'database', customRules: config.relaxedAuthRateLimits ? RELAXED_RATE_LIMITS : undefined },
+    hooks: {
+      // A hook's return value replaces the endpoint's response: these must resolve to undefined.
+      before: createAuthMiddleware((ctx) => {
+        if (ctx.path === '/oauth2/register') rejectInvalidRegistration(ctx.body)
+        return Promise.resolve()
+      }),
+      after: createAuthMiddleware((ctx) => {
+        if (ctx.path === '/oauth2/register') logRegistration(ctx.context.returned, ctx.headers)
+        return Promise.resolve()
+      }),
     },
     databaseHooks: {
       session: {
@@ -159,10 +197,13 @@ export function createAuth(config: AuthConfig) {
         loginPage: `${config.webOrigin}/login`,
         consentPage: `${config.webOrigin}/consent`,
         resource: config.mcpResource,
-        allowDynamicClientRegistration: config.openClientRegistration ?? false,
-        allowUnauthenticatedClientRegistration: config.openClientRegistration ?? false,
-        // Local clients register as web clients with an http://localhost callback (e.g. MCP Inspector).
-        allowInsecureRedirectUri: config.openClientRegistration ? (url) => LOOPBACK.has(url.hostname) : undefined,
+        allowDynamicClientRegistration: config.dynamicClientRegistration ?? false,
+        allowUnauthenticatedClientRegistration: config.dynamicClientRegistration ?? false,
+        // A registration with only loopback http (or custom-scheme) callbacks is a native client,
+        // which RFC 8252 lets use http://localhost; anything else is a web client (https only).
+        clientRegistrationDefaultApplicationType: 'infer',
+        // Per IP. Counters live in Postgres (see `rateLimit` below), so the limit holds across Lambdas.
+        rateLimit: { register: { window: 3600, max: 10 } },
         // The consent is tied to the session's active tenant, so tokens say which tenant they act in.
         // No picker yet (shouldRedirect: false): a user in several tenants authorizes the active one.
         postLogin: {

@@ -18,6 +18,8 @@ const ConfigSchema = z.object({
   smtpPort: z.coerce.number().int().positive().default(1025),
   googleClientId: z.string().default(''),
   googleClientSecret: z.string().default(''),
+  // NITRO_OAUTH_DCR_ENABLED: 'true' / 'false'; unset = on outside production only.
+  oauthDcrEnabled: z.union([z.boolean(), z.enum(['true', 'false', '']).transform((v) => (v === '' ? undefined : v === 'true'))]).optional(),
 })
 
 type Env = { production: boolean }
@@ -36,8 +38,11 @@ const rules = (env: Env) => (cfg: z.infer<typeof ConfigSchema>, ctx: z.Refinemen
   }
 }
 
-const resolve = ({ resendApiKey, emailFrom, smtpHost, smtpPort, googleClientId, googleClientSecret, ...cfg }: z.infer<typeof ConfigSchema>) => ({
+const resolve = (env: Env) => ({ resendApiKey, emailFrom, smtpHost, smtpPort, googleClientId, googleClientSecret, oauthDcrEnabled, ...cfg }: z.infer<typeof ConfigSchema>) => ({
   ...cfg,
+  // Open client registration: anyone can create an OAuth client, so production needs an explicit opt-in.
+  oauthDcrEnabled: oauthDcrEnabled ?? !env.production,
+  production: env.production,
   mail: resendApiKey
     ? { kind: 'resend' as const, apiKey: resendApiKey, from: emailFrom }
     : { kind: 'smtp' as const, host: smtpHost, port: smtpPort, from: emailFrom || 'no-reply@localhost' },
@@ -46,7 +51,7 @@ const resolve = ({ resendApiKey, emailFrom, smtpHost, smtpPort, googleClientId, 
 
 /** Validates runtime config. Error names the offending keys only, never their values. */
 export function parseConfig(rawConfig: unknown, env: Env = { production: process.env.NODE_ENV === 'production' }) {
-  const result = ConfigSchema.superRefine(rules(env)).transform(resolve).safeParse(rawConfig)
+  const result = ConfigSchema.superRefine(rules(env)).transform(resolve(env)).safeParse(rawConfig)
   if (result.success) return result.data
   const keys = [...new Set(result.error.issues.map((i) => i.path.join('.')))].join(', ')
   throw new Error(`Invalid server configuration: ${keys}`)
@@ -65,8 +70,8 @@ function build(rawConfig: unknown) {
     webOrigin: cfg.webOrigin,
     mcpResource: cfg.mcpResource,
     google: cfg.google,
-    // Never in production: anyone could register clients there.
-    openClientRegistration: process.env.NODE_ENV !== 'production',
+    dynamicClientRegistration: cfg.oauthDcrEnabled,
+    relaxedAuthRateLimits: !cfg.production,
     sendEmail: cfg.mail.kind === 'resend' ? resendSender(cfg.mail) : smtpSender(cfg.mail),
   })
   return {

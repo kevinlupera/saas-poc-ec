@@ -67,3 +67,13 @@ test('the MCP resource is served by the API itself (same origin)', () => {
   failsWith({ ...base, mcpResource: 'http://localhost:3002/mcp' }, dev, ['mcpResource'])
   failsWith({ ...base, mcpResource: 'http://localhost:3001/other' }, dev, ['mcpResource'])
 })
+
+test('open client registration (NITRO_OAUTH_DCR_ENABLED): on outside production, off in production unless set', () => {
+  const withProd = { ...base, resendApiKey: 're_x', emailFrom: 'a@b.co' }
+  assert.equal(parseConfig({ ...base, oauthDcrEnabled: '' }, dev).oauthDcrEnabled, true)
+  assert.equal(parseConfig(base, dev).oauthDcrEnabled, true)
+  assert.equal(parseConfig(withProd, prod).oauthDcrEnabled, false)
+  assert.equal(parseConfig({ ...withProd, oauthDcrEnabled: true }, prod).oauthDcrEnabled, true)
+  assert.equal(parseConfig({ ...base, oauthDcrEnabled: 'false' }, dev).oauthDcrEnabled, false)
+  failsWith({ ...base, oauthDcrEnabled: 'yes' }, dev, ['oauthDcrEnabled'])
+})
